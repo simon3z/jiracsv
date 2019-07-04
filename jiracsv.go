@@ -4,163 +4,53 @@ import (
 	"encoding/csv"
 	"flag"
 	"fmt"
-	"net/http"
 	"os"
-	"reflect"
-	"regexp"
-	"strings"
-	"syscall"
 
 	jira "github.com/andygrunwald/go-jira"
-	"golang.org/x/crypto/ssh/terminal"
 )
 
-// PasswordEnvVariableName is the environment variable name used to
-var PasswordEnvVariableName = "PASSWORD"
-
-// DeliveryOwnerRegExp is the Regular Expression used to collect the Epic Delivery Owner
-var DeliveryOwnerRegExp = `\W*(Delivery Owner|DELIVERY OWNER)\W*:\W*\[~([a-zA-Z0-9]*)\]`
-
-// ArrayFlag is used for command line flags with multiple values
-type ArrayFlag []string
-
-func (i *ArrayFlag) String() string {
-	return strings.Join(*i, ", ")
-}
-
-// Set function adds a value to the array
-func (i *ArrayFlag) Set(value string) error {
-	*i = append(*i, value)
-	return nil
-}
-
-// CmdFlags represent the command line flag options
-var CmdFlags = struct {
-	JiraURL    string
-	Username   string
-	Password   string
-	Project    string
-	Version    string
-	Components ArrayFlag
+var commandFlags = struct {
+	JiraURL           string
+	Username          string
+	Password          string
+	Project           string
+	IncludeVersions   ArrayFlag
+	ExcludeVersions   ArrayFlag
+	ExcludeComponents ArrayFlag
+	JiraClient        *jira.Client
 }{}
 
-func jiraIssueLink(i *jira.Issue) string {
-	return strings.Join([]string{CmdFlags.JiraURL, "browse", i.Key}, "/")
-}
-
-func googleSheetLink(link, text string) string {
-	return fmt.Sprintf("=HYPERLINK(\"%s\",\"%s\")", link, text)
-}
-
-func jiraJQLSearch(project, version, component string) string {
-	filter := []string{
-		fmt.Sprintf("status != \"Obsolete\""),
-	}
-
-	if project != "" {
-		filter = append(filter, fmt.Sprintf("project = \"%s\"", project))
-	}
-
-	if version != "" {
-		filter = append(filter, fmt.Sprintf("fixVersion = \"%s\"", version))
-	}
-
-	if component != "" {
-		filter = append(filter, fmt.Sprintf("component = \"%s\"", component))
-	}
-
-	return strings.Join(filter, " AND ") + " ORDER BY id ASC"
-}
-
-func getDeliveryOwner(i *jira.Issue) string {
-	matches := regexp.MustCompile(DeliveryOwnerRegExp).FindStringSubmatch(i.Fields.Description)
-
-	if len(matches) == 3 {
-		return matches[2]
-	}
-
-	return ""
-}
-
-func iterateUnknownMaps(i *jira.Issue, f func(m map[string]interface{})) {
-	for _, v := range i.Fields.Unknowns {
-		if l, isSlice := v.([]interface{}); isSlice {
-			for _, j := range l {
-				f(j.(map[string]interface{}))
-			}
-		}
-	}
-}
-
-func getAcksStatus(i *jira.Issue) string {
-	acks := struct {
-		DevelAck bool `value:"devel_ack"`
-		PMAck    bool `value:"pm_ack"`
-		QEAck    bool `value:"qa_ack"`
-		UXAck    bool `value:"ux_ack"`
-		DocAck   bool `value:"doc_ack"`
-	}{false, false, false, false, false}
-
-	acksType := reflect.TypeOf(acks)
-	acksValue := reflect.ValueOf(&acks)
-
-	iterateUnknownMaps(i, func(m map[string]interface{}) {
-		for j := 0; j < acksType.NumField(); j++ {
-			if m["value"] == acksType.Field(j).Tag.Get("value") {
-				acksValue.Elem().Field(j).SetBool(true)
-			}
-		}
-	})
-
-	if acks.DevelAck && acks.PMAck && acks.QEAck && acks.UXAck && acks.DocAck {
-		return "\u2713" // UTF-8 Mark
-	}
-
-	return ""
-}
-
 func init() {
-	flag.StringVar(&CmdFlags.JiraURL, "h", "", "Jira instance URL")
-	flag.StringVar(&CmdFlags.Username, "u", "", "Jira username")
-	flag.StringVar(&CmdFlags.Project, "p", "", "Project to use to collect Issues")
-	flag.StringVar(&CmdFlags.Version, "v", "", "Version to use to collect Issues")
-	flag.Var(&CmdFlags.Components, "c", "Components to use to collect Issues")
+	flag.StringVar(&commandFlags.JiraURL, "h", "", "Jira instance URL")
+	flag.StringVar(&commandFlags.Username, "u", "", "Jira username")
+	flag.StringVar(&commandFlags.Project, "p", "", "Project to use to collect Issues")
+	flag.Var(&commandFlags.IncludeVersions, "v", "Versions to include for the Issues collection")
+	flag.Var(&commandFlags.ExcludeVersions, "V", "Versions to exclude for the Issues collection")
+	flag.Var(&commandFlags.ExcludeComponents, "C", "Versions to exclude for the Issues collection")
 }
 
-func getPassword() {
-	CmdFlags.Password = os.Getenv(PasswordEnvVariableName)
-
-	if CmdFlags.Password == "" && terminal.IsTerminal(syscall.Stdin) {
-		os.Stdin.Write([]byte("Password: "))
-
-		pw, err := terminal.ReadPassword(syscall.Stdin)
-		defer os.Stdin.Write([]byte("\n"))
-
-		if err != nil {
-			panic(err)
-		}
-
-		CmdFlags.Password = string(pw)
+func writeIssues(w *csv.Writer, issues []*JiraIssue) {
+	for _, i := range issues {
+		w.Write([]string{
+			googleSheetLink(i.Link, i.Key),
+			i.Fields.Summary,
+			i.Fields.Type.Name,
+			i.Fields.Priority.Name,
+			i.Fields.Status.Name,
+			i.DeliveryOwner(),
+			i.Assignee(),
+			i.AcksStatus(),
+			i.LinkedIssues.EpicsTotalStatusString(),
+		})
 	}
 }
 
 func main() {
 	flag.Parse()
 
-	client := (*http.Client)(nil)
+	commandFlags.Password = GetPassword("PASSWORD", true)
 
-	if CmdFlags.Username != "" {
-		getPassword()
-
-		transport := jira.BasicAuthTransport{
-			Username: CmdFlags.Username,
-			Password: CmdFlags.Password,
-		}
-
-		client = transport.Client()
-	}
-
-	jiraClient, err := jira.NewClient(client, CmdFlags.JiraURL)
+	jiraClient, err := NewJiraClient(commandFlags.JiraURL, &commandFlags.Username, &commandFlags.Password)
 
 	if err != nil {
 		panic(err)
@@ -169,30 +59,61 @@ func main() {
 	w := csv.NewWriter(os.Stdout)
 	w.Comma = '\t'
 
-	for _, component := range CmdFlags.Components {
-		issues, ret, err := jiraClient.Issue.Search(jiraJQLSearch(CmdFlags.Project, CmdFlags.Version, component), nil)
+	componentIssues := map[string][]*JiraIssue{}
+	orphanIssues := []*JiraIssue{}
 
-		if err != nil {
-			if ret.Response.StatusCode == http.StatusForbidden || ret.Response.StatusCode == http.StatusUnauthorized {
-				panic("Access Unauthorized: check basic authentication using a browser and retry")
-			} else {
-				panic(err)
+	components, err := jiraClient.FindProjectComponents(commandFlags.Project)
+
+	if err != nil {
+		panic(err)
+	}
+
+	for _, c := range components {
+		componentIssues[c.Name] = []*JiraIssue{}
+	}
+
+	epicsJql := jiraJQLEpicsSearch(commandFlags.Project, commandFlags.IncludeVersions, commandFlags.ExcludeVersions)
+
+	fmt.Fprintf(os.Stdout, "JQL = %s\n", epicsJql)
+
+	issues, err := jiraClient.FindEpics(epicsJql)
+
+	if err != nil {
+		panic(err)
+	}
+
+	for _, i := range issues {
+		if len(i.Fields.Components) > 0 {
+			for _, c := range i.Fields.Components {
+				componentIssues[c.Name] = append(componentIssues[c.Name], i)
+			}
+		} else {
+			orphanIssues = append(orphanIssues, i)
+		}
+	}
+
+	for _, k := range sortedIssuesMapKeys(componentIssues) {
+		skipComponent := false
+
+		for _, c := range commandFlags.ExcludeComponents {
+			if k == c {
+				skipComponent = true
+				break
 			}
 		}
 
-		w.Write([]string{component})
-
-		for _, i := range issues {
-			w.Write([]string{
-				googleSheetLink(jiraIssueLink(&i), i.Key),
-				i.Fields.Summary,
-				i.Fields.Priority.Name,
-				i.Fields.Status.Name,
-				getDeliveryOwner(&i),
-				getAcksStatus(&i),
-			})
+		if skipComponent {
+			continue
 		}
+
+		w.Write([]string{k})
+		writeIssues(w, componentIssues[k])
 
 		w.Flush()
 	}
+
+	w.Write([]string{"[UNASSIGNED]"})
+	writeIssues(w, orphanIssues)
+
+	w.Flush()
 }
