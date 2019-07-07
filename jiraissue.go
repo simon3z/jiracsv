@@ -1,21 +1,41 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
-	"reflect"
 	"regexp"
 
 	jira "github.com/andygrunwald/go-jira"
 )
 
-// DeliveryOwnerRegExp is the Regular Expression used to collect the Epic Delivery Owner
-var DeliveryOwnerRegExp = `\W*(Delivery Owner|DELIVERY OWNER)\W*:\W*\[~([a-zA-Z0-9]*)\]`
+const (
+	// DeliveryOwnerRegExp is the Regular Expression used to collect the Epic Delivery Owner
+	DeliveryOwnerRegExp = `\W*(Delivery Owner|DELIVERY OWNER)\W*:\W*\[~([a-zA-Z0-9]*)\]`
+)
+
+var (
+	// ErrorAuthentication is returned when the authentication failed
+	ErrorAuthentication = errors.New("Access Unauthorized: check basic authentication")
+)
 
 // JiraClient represents a Jira Client definition
 type JiraClient struct {
 	*jira.Client
+	CustomFieldID struct {
+		StoryPoints string
+		AckFlags    string
+	}
+}
+
+// JiraIssueApprovals represents a Jira Issue Approvals
+type JiraIssueApprovals struct {
+	Development   bool
+	Product       bool
+	Quality       bool
+	Experience    bool
+	Documentation bool
 }
 
 // JiraIssue represents a Jira Issue
@@ -23,6 +43,8 @@ type JiraIssue struct {
 	jira.Issue
 	Link         string
 	LinkedIssues JiraIssueCollection
+	StoryPoints  int
+	Approvals    JiraIssueApprovals
 }
 
 // JiraIssueCollection is a collection of Jira Issues
@@ -43,7 +65,36 @@ func NewJiraClient(url string, username, password *string) (*JiraClient, error) 
 		return nil, err
 	}
 
-	return &JiraClient{jiraClient}, nil
+	fields, ret, err := jiraClient.Field.GetList()
+
+	if err := jiraReturnError(ret, err); err != nil {
+		return nil, err
+	}
+
+	client := &JiraClient{Client: jiraClient}
+
+	for _, f := range fields {
+		switch f.Name {
+		case "Story Points":
+			client.CustomFieldID.StoryPoints = f.ID
+		case "5-Acks Check":
+			client.CustomFieldID.AckFlags = f.ID
+		}
+	}
+
+	return client, nil
+}
+
+func jiraReturnError(ret *jira.Response, err error) error {
+	if err == nil {
+		return nil
+	}
+
+	if ret.Response.StatusCode == http.StatusForbidden || ret.Response.StatusCode == http.StatusUnauthorized {
+		return ErrorAuthentication
+	}
+
+	return err
 }
 
 // NewJiraIssueCollection creates and returns a new Jira Issue Collection
@@ -69,10 +120,8 @@ func (c *JiraClient) FindIssues(jql string) (JiraIssueCollection, error) {
 	for {
 		issuesPage, ret, err := c.Issue.Search(jql, &jira.SearchOptions{StartAt: len(issues), MaxResults: 50})
 
-		if err != nil {
-			if ret.Response.StatusCode == http.StatusForbidden || ret.Response.StatusCode == http.StatusUnauthorized {
-				return nil, fmt.Errorf("Access Unauthorized: check basic authentication using a browser and retry")
-			}
+		if err := jiraReturnError(ret, err); err != nil {
+			return nil, err
 		}
 
 		if len(issuesPage) == 0 {
@@ -88,6 +137,31 @@ func (c *JiraClient) FindIssues(jql string) (JiraIssueCollection, error) {
 		clientURL := c.GetBaseURL()
 
 		for j, i := range issuesPage {
+			storyPoints := 0
+
+			if val := i.Fields.Unknowns[c.CustomFieldID.StoryPoints]; val != nil {
+				storyPoints = int(val.(float64))
+			}
+
+			issueApprovals := JiraIssueApprovals{false, false, false, false, false}
+
+			if val := i.Fields.Unknowns[c.CustomFieldID.AckFlags]; val != nil {
+				for _, p := range val.([]interface{}) {
+					switch p.(map[string]interface{})["value"].(string) {
+					case "devel_ack":
+						issueApprovals.Development = true
+					case "pm_ack":
+						issueApprovals.Product = true
+					case "qa_ack":
+						issueApprovals.Quality = true
+					case "ux_ack":
+						issueApprovals.Experience = true
+					case "doc_ack":
+						issueApprovals.Documentation = true
+					}
+				}
+			}
+
 			issueURL := url.URL{
 				Scheme: clientURL.Scheme,
 				Host:   clientURL.Host,
@@ -95,9 +169,11 @@ func (c *JiraClient) FindIssues(jql string) (JiraIssueCollection, error) {
 			}
 
 			newIssues[len(issues)+j] = &JiraIssue{
-				issuesPage[j],
+				i,
 				issueURL.String(),
 				JiraIssueCollection{},
+				storyPoints,
+				issueApprovals,
 			}
 		}
 
@@ -138,6 +214,11 @@ func (c *JiraClient) FindEpics(jql string) (JiraIssueCollection, error) {
 	return issues, nil
 }
 
+// Approved returns true if all approvals are true
+func (a *JiraIssueApprovals) Approved() bool {
+	return a.Development == true && a.Product == true && a.Quality == true && a.Experience == true && a.Documentation == true
+}
+
 // DeliveryOwner returns the Jira Issue Delivery Owner
 func (i *JiraIssue) DeliveryOwner() string {
 	matches := regexp.MustCompile(DeliveryOwnerRegExp).FindStringSubmatch(i.Fields.Description)
@@ -149,39 +230,9 @@ func (i *JiraIssue) DeliveryOwner() string {
 	return i.Assignee()
 }
 
-func (i *JiraIssue) iterateUnknownMaps(f func(m map[string]interface{})) {
-	for _, v := range i.Fields.Unknowns {
-		if l, isSlice := v.([]interface{}); isSlice {
-			for _, j := range l {
-				f(j.(map[string]interface{}))
-			}
-		}
-	}
-}
-
-// AcksStatus returns the Jira Issue Acks Status
-func (i *JiraIssue) AcksStatus() string {
-	acks := struct {
-		DevelAck    bool `value:"devel_ack"`
-		PMAck       bool `value:"pm_ack"`
-		QEAck       bool `value:"qa_ack"`
-		UXAck       bool `value:"ux_ack"`
-		DocAck      bool `value:"doc_ack"`
-		StoryPoints int  `value:""`
-	}{false, false, false, false, false, 0}
-
-	acksType := reflect.TypeOf(acks)
-	acksValue := reflect.ValueOf(&acks)
-
-	i.iterateUnknownMaps(func(m map[string]interface{}) {
-		for j := 0; j < acksType.NumField(); j++ {
-			if m["value"] == acksType.Field(j).Tag.Get("value") {
-				acksValue.Elem().Field(j).SetBool(true)
-			}
-		}
-	})
-
-	if acks.DevelAck && acks.PMAck && acks.QEAck && acks.UXAck && acks.DocAck {
+// AcksStatusString returns the Jira Issue Acks Status
+func (i *JiraIssue) AcksStatusString() string {
+	if i.Approvals.Approved() {
 		return "\u2713" // UTF-8 Mark
 	}
 
@@ -213,4 +264,30 @@ func (c JiraIssueCollection) EpicsTotalStatusString() string {
 	}
 
 	return fmt.Sprintf("%d/%d", completedIssues, totalIssues)
+}
+
+// EpicsTotalPointsString returns the Jira Issues Collection Status
+func (c JiraIssueCollection) EpicsTotalPointsString() string {
+	totalPoints := 0
+	incompletePointsMark := ""
+	completedPoints := 0
+
+	for _, i := range c {
+		if i.StoryPoints == 0 {
+			incompletePointsMark = "!"
+			continue
+		}
+
+		totalPoints += i.StoryPoints
+
+		if i.Fields.Resolution != nil && i.Fields.Resolution.Name == "Done" {
+			completedPoints += i.StoryPoints
+		}
+	}
+
+	if totalPoints == 0 && completedPoints == 0 {
+		return ""
+	}
+
+	return fmt.Sprintf("%d/%d%s", completedPoints, totalPoints, incompletePointsMark)
 }

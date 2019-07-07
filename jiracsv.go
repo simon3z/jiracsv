@@ -39,8 +39,9 @@ func writeIssues(w *csv.Writer, issues []*JiraIssue) {
 			i.Fields.Status.Name,
 			i.DeliveryOwner(),
 			i.Assignee(),
-			i.AcksStatus(),
+			i.AcksStatusString(),
 			i.LinkedIssues.EpicsTotalStatusString(),
+			i.LinkedIssues.EpicsTotalPointsString(),
 		})
 	}
 }
