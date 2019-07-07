@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"os"
 
-	jira "github.com/andygrunwald/go-jira"
+	"io.bytenix.com/jiracsv/jira"
 )
 
 var commandFlags = struct {
@@ -17,7 +17,6 @@ var commandFlags = struct {
 	IncludeVersions   ArrayFlag
 	ExcludeVersions   ArrayFlag
 	ExcludeComponents ArrayFlag
-	JiraClient        *jira.Client
 }{}
 
 func init() {
@@ -29,9 +28,9 @@ func init() {
 	flag.Var(&commandFlags.ExcludeComponents, "C", "Versions to exclude for the Issues collection")
 }
 
-func writeIssues(w *csv.Writer, component string, issues []*JiraIssue) {
+func writeIssues(w *csv.Writer, component string, issues []*jira.Issue) {
 	for _, i := range issues {
-		stories := i.LinkedEpics.FilterNotObsolete()
+		stories := i.LinkedIssues.FilterNotObsolete()
 
 		if component != "" {
 			stories = stories.FilterByComponent(component)
@@ -57,7 +56,7 @@ func main() {
 
 	commandFlags.Password = GetPassword("PASSWORD", true)
 
-	jiraClient, err := NewJiraClient(commandFlags.JiraURL, &commandFlags.Username, &commandFlags.Password)
+	jiraClient, err := jira.NewClient(commandFlags.JiraURL, &commandFlags.Username, &commandFlags.Password)
 
 	if err != nil {
 		panic(err)
@@ -66,8 +65,8 @@ func main() {
 	w := csv.NewWriter(os.Stdout)
 	w.Comma = '\t'
 
-	componentIssues := map[string][]*JiraIssue{}
-	orphanIssues := []*JiraIssue{}
+	componentIssues := map[string][]*jira.Issue{}
+	orphanIssues := []*jira.Issue{}
 
 	components, err := jiraClient.FindProjectComponents(commandFlags.Project)
 
@@ -76,7 +75,7 @@ func main() {
 	}
 
 	for _, c := range components {
-		componentIssues[c.Name] = []*JiraIssue{}
+		componentIssues[c.Name] = []*jira.Issue{}
 	}
 
 	epicsJql := jiraJQLEpicsSearch(commandFlags.Project, commandFlags.IncludeVersions, commandFlags.ExcludeVersions)

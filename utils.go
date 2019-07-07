@@ -8,6 +8,7 @@ import (
 	"syscall"
 
 	"golang.org/x/crypto/ssh/terminal"
+	"io.bytenix.com/jiracsv/jira"
 )
 
 // ArrayFlag is used for command line flags with multiple values
@@ -43,7 +44,7 @@ func GetPassword(env string, interactive bool) string {
 	return password
 }
 
-func sortedIssuesMapKeys(m map[string][]*JiraIssue) []string {
+func sortedIssuesMapKeys(m map[string][]*jira.Issue) []string {
 	keys := make([]string, 0, len(m))
 
 	for k := range m {
