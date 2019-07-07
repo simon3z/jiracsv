@@ -1,0 +1,20 @@
+instance:
+  url: https://jira.atlassian.com
+profiles:
+- id: jira-latest-fixes
+  jql:
+    project = JRASERVER AND
+    fixVersion = latestReleasedVersion()
+  components:
+    exclude:
+    - Tomcat
+- id: jira-83-closed
+  jql:
+    project = JRASERVER AND
+    status = Closed AND
+    fixVersion = 8.3.0
+  components:
+    include:
+    - FooBar Component 
+    exclude:
+    - Tomcat

@@ -10,22 +10,15 @@ import (
 )
 
 var commandFlags = struct {
-	JiraURL           string
-	Username          string
-	Password          string
-	Project           string
-	IncludeVersions   ArrayFlag
-	ExcludeVersions   ArrayFlag
-	ExcludeComponents ArrayFlag
+	Configuration string
+	Profile       string
+	Username      string
 }{}
 
 func init() {
-	flag.StringVar(&commandFlags.JiraURL, "h", "", "Jira instance URL")
 	flag.StringVar(&commandFlags.Username, "u", "", "Jira username")
-	flag.StringVar(&commandFlags.Project, "p", "", "Project to use to collect Issues")
-	flag.Var(&commandFlags.IncludeVersions, "v", "Versions to include for the Issues collection")
-	flag.Var(&commandFlags.ExcludeVersions, "V", "Versions to exclude for the Issues collection")
-	flag.Var(&commandFlags.ExcludeComponents, "C", "Versions to exclude for the Issues collection")
+	flag.StringVar(&commandFlags.Configuration, "c", "", "Configuration file")
+	flag.StringVar(&commandFlags.Profile, "p", "", "Search profile")
 }
 
 func writeIssues(w *csv.Writer, component string, issues []*jira.Issue) {
@@ -54,9 +47,28 @@ func writeIssues(w *csv.Writer, component string, issues []*jira.Issue) {
 func main() {
 	flag.Parse()
 
-	commandFlags.Password = GetPassword("PASSWORD", true)
+	if commandFlags.Configuration == "" {
+		panic(fmt.Errorf("configuration file not specified"))
+	}
 
-	jiraClient, err := jira.NewClient(commandFlags.JiraURL, &commandFlags.Username, &commandFlags.Password)
+	if commandFlags.Profile == "" {
+		panic(fmt.Errorf("profile id file not specified"))
+	}
+
+	config, err := ReadConfigFile(commandFlags.Configuration)
+
+	if err != nil {
+		panic(err)
+	}
+
+	profile := config.FindProfile(commandFlags.Profile)
+
+	if profile == nil {
+		panic(fmt.Errorf("profile '%s' not found", commandFlags.Profile))
+	}
+
+	password := GetPassword("PASSWORD", true)
+	jiraClient, err := jira.NewClient(config.Instance.URL, &commandFlags.Username, &password)
 
 	if err != nil {
 		panic(err)
@@ -68,7 +80,7 @@ func main() {
 	componentIssues := map[string][]*jira.Issue{}
 	orphanIssues := []*jira.Issue{}
 
-	components, err := jiraClient.FindProjectComponents(commandFlags.Project)
+	components, err := jiraClient.FindProjectComponents(profile.Components.Project)
 
 	if err != nil {
 		panic(err)
@@ -78,11 +90,9 @@ func main() {
 		componentIssues[c.Name] = []*jira.Issue{}
 	}
 
-	epicsJql := jiraJQLEpicsSearch(commandFlags.Project, commandFlags.IncludeVersions, commandFlags.ExcludeVersions)
+	fmt.Fprintf(os.Stdout, "JQL = %s\n", profile.JQL)
 
-	fmt.Fprintf(os.Stdout, "JQL = %s\n", epicsJql)
-
-	issues, err := jiraClient.FindEpics(epicsJql)
+	issues, err := jiraClient.FindEpics(profile.JQL)
 
 	if err != nil {
 		panic(err)
@@ -101,7 +111,7 @@ func main() {
 	for _, k := range sortedIssuesMapKeys(componentIssues) {
 		skipComponent := false
 
-		for _, c := range commandFlags.ExcludeComponents {
+		for _, c := range profile.Components.Exclude {
 			if k == c {
 				skipComponent = true
 				break

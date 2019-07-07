@@ -59,25 +59,3 @@ func sortedIssuesMapKeys(m map[string][]*jira.Issue) []string {
 func googleSheetLink(link, text string) string {
 	return fmt.Sprintf("=HYPERLINK(\"%s\",\"%s\")", link, text)
 }
-
-func jiraJQLEpicsSearch(project string, includeVersions, excludeVersions []string) string {
-	filter := []string{
-		fmt.Sprintf("status != \"Obsolete\""),
-	}
-
-	if project != "" {
-		filter = append(filter, fmt.Sprintf("project = \"%s\"", project))
-	}
-
-	if len(includeVersions) > 0 {
-		v := strings.Join(includeVersions, "\",\"")
-		filter = append(filter, fmt.Sprintf("fixVersion IN (\"%s\")", v))
-	}
-
-	if len(excludeVersions) > 0 {
-		v := strings.Join(excludeVersions, "\",\"")
-		filter = append(filter, fmt.Sprintf("fixVersion NOT IN (\"%s\")", v))
-	}
-
-	return strings.Join(filter, " AND ") + " ORDER BY id ASC"
-}
