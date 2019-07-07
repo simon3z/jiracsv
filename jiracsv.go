@@ -29,8 +29,14 @@ func init() {
 	flag.Var(&commandFlags.ExcludeComponents, "C", "Versions to exclude for the Issues collection")
 }
 
-func writeIssues(w *csv.Writer, issues []*JiraIssue) {
+func writeIssues(w *csv.Writer, component string, issues []*JiraIssue) {
 	for _, i := range issues {
+		stories := i.LinkedEpics.FilterNotObsolete()
+
+		if component != "" {
+			stories = stories.FilterByComponent(component)
+		}
+
 		w.Write([]string{
 			googleSheetLink(i.Link, i.Key),
 			i.Fields.Summary,
@@ -40,8 +46,8 @@ func writeIssues(w *csv.Writer, issues []*JiraIssue) {
 			i.DeliveryOwner(),
 			i.Assignee(),
 			i.AcksStatusString(),
-			i.LinkedIssues.EpicsTotalStatusString(),
-			i.LinkedIssues.EpicsTotalPointsString(),
+			stories.EpicsTotalStatusString(),
+			stories.EpicsTotalPointsString(),
 		})
 	}
 }
@@ -108,13 +114,13 @@ func main() {
 		}
 
 		w.Write([]string{k})
-		writeIssues(w, componentIssues[k])
+		writeIssues(w, k, componentIssues[k])
 
 		w.Flush()
 	}
 
 	w.Write([]string{"[UNASSIGNED]"})
-	writeIssues(w, orphanIssues)
+	writeIssues(w, "", orphanIssues)
 
 	w.Flush()
 }

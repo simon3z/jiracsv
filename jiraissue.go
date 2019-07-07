@@ -248,6 +248,35 @@ func (i *JiraIssue) Assignee() string {
 	return i.Fields.Assignee.Key
 }
 
+// FilterByComponent returns jira issues from collection that belongs to a component
+func (c JiraIssueCollection) FilterByComponent(component string) JiraIssueCollection {
+	r := JiraIssueCollection{}
+
+	for _, i := range c {
+		for _, t := range i.Fields.Components {
+			if t.Name == component {
+				r = append(r, i)
+				break
+			}
+		}
+	}
+
+	return r
+}
+
+// FilterNotObsolete returns jira issues from collection that are not obsolete
+func (c JiraIssueCollection) FilterNotObsolete() JiraIssueCollection {
+	r := JiraIssueCollection{}
+
+	for _, i := range c {
+		if i.Fields.Status.Name != "Obsolete" {
+			r = append(r, i)
+		}
+	}
+
+	return r
+}
+
 // EpicsTotalStatusString returns the Jira Issues Collection Status
 func (c JiraIssueCollection) EpicsTotalStatusString() string {
 	totalIssues := len(c)
