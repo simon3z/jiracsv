@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"regexp"
 
 	jira "github.com/andygrunwald/go-jira"
 )
@@ -25,6 +24,7 @@ type Issue struct {
 	LinkedIssues IssueCollection
 	StoryPoints  int
 	Approvals    IssueApprovals
+	Owner        string
 }
 
 // IssueCollection is a collection of Jira Issues
@@ -78,17 +78,6 @@ func (a *IssueApprovals) Approved() bool {
 	return a.Development == true && a.Product == true && a.Quality == true && a.Experience == true && a.Documentation == true
 }
 
-// DeliveryOwner returns the Jira Issue Delivery Owner
-func (i *Issue) DeliveryOwner() string {
-	matches := regexp.MustCompile(DeliveryOwnerRegExp).FindStringSubmatch(i.Fields.Description)
-
-	if len(matches) == 3 {
-		return matches[2]
-	}
-
-	return i.Assignee()
-}
-
 // AcksStatusString returns the Jira Issue Acks Status
 func (i *Issue) AcksStatusString() string {
 	if i.Approvals.Approved() {
@@ -96,15 +85,6 @@ func (i *Issue) AcksStatusString() string {
 	}
 
 	return ""
-}
-
-// Assignee returns the Jira Issue Assignee
-func (i *Issue) Assignee() string {
-	if i.Fields.Assignee == nil {
-		return ""
-	}
-
-	return i.Fields.Assignee.Key
 }
 
 // FilterByComponent returns jira issues from collection that belongs to a component

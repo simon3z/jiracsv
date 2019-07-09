@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"regexp"
 
 	jira "github.com/andygrunwald/go-jira"
 )
@@ -112,6 +113,15 @@ func (c *Client) FindIssues(jql string) (IssueCollection, error) {
 				}
 			}
 
+			deliveryOwner := ""
+			deliveryOwnerMatches := regexp.MustCompile(DeliveryOwnerRegExp).FindStringSubmatch(i.Fields.Description)
+
+			if len(deliveryOwnerMatches) == 3 {
+				deliveryOwner = deliveryOwnerMatches[2]
+			} else if i.Fields.Assignee != nil {
+				deliveryOwner = i.Fields.Assignee.Name
+			}
+
 			issueURL := url.URL{
 				Scheme: clientURL.Scheme,
 				Host:   clientURL.Host,
@@ -124,6 +134,7 @@ func (c *Client) FindIssues(jql string) (IssueCollection, error) {
 				NewIssueCollection(0),
 				storyPoints,
 				issueApprovals,
+				deliveryOwner,
 			}
 		}
 
