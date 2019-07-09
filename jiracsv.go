@@ -21,12 +21,12 @@ func init() {
 	flag.StringVar(&commandFlags.Profile, "p", "", "Search profile")
 }
 
-func writeIssues(w *csv.Writer, component string, issues []*jira.Issue) {
+func writeIssues(w *csv.Writer, component *string, issues []*jira.Issue) {
 	for _, i := range issues {
 		stories := i.LinkedIssues.FilterNotObsolete()
 
-		if component != "" {
-			stories = stories.FilterByComponent(component)
+		if component != nil {
+			stories = stories.FilterByComponent(*component)
 		}
 
 		w.Write([]string{
@@ -108,13 +108,13 @@ func main() {
 		}
 
 		w.Write([]string{k.Name})
-		writeIssues(w, k.Name, k.Issues)
+		writeIssues(w, &k.Name, k.Issues)
 
 		w.Flush()
 	}
 
 	w.Write([]string{"[UNASSIGNED]"})
-	writeIssues(w, "", componentIssues.Orphans)
+	writeIssues(w, nil, componentIssues.Orphans)
 
 	w.Flush()
 }
