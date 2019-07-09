@@ -11,7 +11,7 @@ type SearchProfile struct {
 	ID         string
 	JQL        string
 	Components struct {
-		Project string
+		Include []string
 		Exclude []string
 	}
 }

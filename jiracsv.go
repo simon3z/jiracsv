@@ -77,17 +77,10 @@ func main() {
 	w := csv.NewWriter(os.Stdout)
 	w.Comma = '\t'
 
-	componentIssues := map[string][]*jira.Issue{}
-	orphanIssues := []*jira.Issue{}
+	componentIssues := NewComponentsCollection()
 
-	components, err := jiraClient.FindProjectComponents(profile.Components.Project)
-
-	if err != nil {
-		panic(err)
-	}
-
-	for _, c := range components {
-		componentIssues[c.Name] = []*jira.Issue{}
+	for _, c := range profile.Components.Include {
+		componentIssues.Add(c)
 	}
 
 	fmt.Fprintf(os.Stdout, "JQL = %s\n", profile.JQL)
@@ -98,21 +91,13 @@ func main() {
 		panic(err)
 	}
 
-	for _, i := range issues {
-		if len(i.Fields.Components) > 0 {
-			for _, c := range i.Fields.Components {
-				componentIssues[c.Name] = append(componentIssues[c.Name], i)
-			}
-		} else {
-			orphanIssues = append(orphanIssues, i)
-		}
-	}
+	componentIssues.AddIssues(issues)
 
-	for _, k := range sortedIssuesMapKeys(componentIssues) {
+	for _, k := range componentIssues.Items {
 		skipComponent := false
 
 		for _, c := range profile.Components.Exclude {
-			if k == c {
+			if k.Name == c {
 				skipComponent = true
 				break
 			}
@@ -122,14 +107,14 @@ func main() {
 			continue
 		}
 
-		w.Write([]string{k})
-		writeIssues(w, k, componentIssues[k])
+		w.Write([]string{k.Name})
+		writeIssues(w, k.Name, k.Issues)
 
 		w.Flush()
 	}
 
 	w.Write([]string{"[UNASSIGNED]"})
-	writeIssues(w, "", orphanIssues)
+	writeIssues(w, "", componentIssues.Orphans)
 
 	w.Flush()
 }
