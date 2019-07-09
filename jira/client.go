@@ -238,7 +238,8 @@ func (c *Client) FindEpics(jql string) (IssueCollection, error) {
 
 	for _, i := range issues {
 		go func(i *Issue, ch chan<- error) {
-			epics, err := c.FindIssues(fmt.Sprintf("\"Epic Link\" = \"%s\"", i.Key))
+			//epics, err := c.FindIssues(fmt.Sprintf("\"Epic Link\" = \"%s\" OR \"Parent Link\" = \"%s\"", i.Key, i.Key))
+			epics, err := c.FindIssues(fmt.Sprintf("issueFunction in issuesInEpics(\"id = %s\") ORDER BY ID ASC", i.Key))
 
 			if err == nil {
 				i.LinkedIssues = epics

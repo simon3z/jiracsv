@@ -183,7 +183,7 @@ func (i *Issue) IsPrioritized() bool {
 	return true
 }
 
-// HasStoryPoints returns true if the issue has story points defined
+// HasStoryPoints returns true if the issue has Story Points defined
 func (i *Issue) HasStoryPoints() bool {
 	if i.StoryPoints > NoStoryPoints {
 		return true

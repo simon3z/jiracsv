@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 
+	"io.bytenix.com/jiracsv/analysis"
 	"io.bytenix.com/jiracsv/jira"
 )
 
@@ -23,28 +24,8 @@ func init() {
 
 func writeIssues(w *csv.Writer, component *string, issues []*jira.Issue) {
 	for _, i := range issues {
-		stories := i.LinkedIssues.FilterByFunction(func(i *jira.Issue) bool {
-			if i.Fields.Status != nil && jira.IssueStatus(i.Fields.Status.Name) == jira.IssueStatusObsolete {
-				return false
-			}
-			return true
-		})
-
-		if component != nil {
-			stories = stories.FilterByFunction(func(i *jira.Issue) bool {
-				if i.HasComponent(*component) {
-					return true
-				}
-				return false
-			})
-		}
-
-		doneStories := stories.FilterByFunction(func(i *jira.Issue) bool {
-			if i.Fields.Status != nil && jira.IssueStatus(i.Fields.Status.Name) == jira.IssueStatusDone {
-				return true
-			}
-			return false
-		})
+		a := analysis.AnalyzeIssue(i, component)
+		f := a.CheckStatus()
 
 		w.Write([]string{
 			googleSheetLink(i.Link, i.Key),
@@ -54,9 +35,12 @@ func writeIssues(w *csv.Writer, component *string, issues []*jira.Issue) {
 			i.Fields.Status.Name,
 			i.Owner,
 			i.QAContact,
-			googleSheetMark(i.Approvals.Approved()),
-			googleSheetProgressBar(doneStories.Len(), stories.Len()),
-			googleSheetProgressBar(doneStories.StoryPoints(), stories.StoryPoints()),
+			googleSheetProgressBar(a.LinkedIssues.Completed, a.LinkedIssues.Total),
+			googleSheetStoryPointsBar(a.StoryPoints.Completed, a.StoryPoints.Total, a.StoryPoints.Complete),
+			googleSheetTime(a.CommentDate),
+			googleSheetBallot(f.Ready),
+			googleSheetCheckStatus(f.Status),
+			f.MessagesString(),
 		})
 	}
 }
@@ -99,8 +83,6 @@ func main() {
 	for _, c := range profile.Components.Include {
 		componentIssues.Add(c)
 	}
-
-	fmt.Fprintf(os.Stdout, "JQL = %s\n", profile.JQL)
 
 	issues, err := jiraClient.FindEpics(profile.JQL)
 
