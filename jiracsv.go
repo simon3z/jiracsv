@@ -36,6 +36,7 @@ func writeIssues(w *csv.Writer, component string, issues []*jira.Issue) {
 			i.Fields.Priority.Name,
 			i.Fields.Status.Name,
 			i.Owner,
+			i.QAContact,
 			i.AcksStatusString(),
 			stories.EpicsTotalStatusString(),
 			stories.EpicsTotalPointsString(),

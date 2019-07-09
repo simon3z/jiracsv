@@ -24,6 +24,8 @@ type Issue struct {
 	LinkedIssues IssueCollection
 	StoryPoints  int
 	Approvals    IssueApprovals
+	QAContact    string
+	Acceptance   string
 	Owner        string
 }
 

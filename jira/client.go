@@ -15,6 +15,8 @@ type Client struct {
 	CustomFieldID struct {
 		StoryPoints string
 		AckFlags    string
+		QAContact   string
+		Acceptance  string
 	}
 }
 
@@ -47,6 +49,10 @@ func NewClient(url string, username, password *string) (*Client, error) {
 			client.CustomFieldID.StoryPoints = f.ID
 		case "5-Acks Check":
 			client.CustomFieldID.AckFlags = f.ID
+		case "QA Contact":
+			client.CustomFieldID.QAContact = f.ID
+		case "Acceptance Criteria":
+			client.CustomFieldID.Acceptance = f.ID
 		}
 	}
 
@@ -113,6 +119,18 @@ func (c *Client) FindIssues(jql string) (IssueCollection, error) {
 				}
 			}
 
+			qaContact := ""
+
+			if val := i.Fields.Unknowns[c.CustomFieldID.QAContact]; val != nil {
+				qaContact = (val.(map[string]interface{})["key"]).(string)
+			}
+
+			acceptanceCriteria := ""
+
+			if val := i.Fields.Unknowns[c.CustomFieldID.Acceptance]; val != nil {
+				acceptanceCriteria = val.(string)
+			}
+
 			deliveryOwner := ""
 			deliveryOwnerMatches := regexp.MustCompile(DeliveryOwnerRegExp).FindStringSubmatch(i.Fields.Description)
 
@@ -134,6 +152,8 @@ func (c *Client) FindIssues(jql string) (IssueCollection, error) {
 				NewIssueCollection(0),
 				storyPoints,
 				issueApprovals,
+				qaContact,
+				acceptanceCriteria,
 				deliveryOwner,
 			}
 		}
