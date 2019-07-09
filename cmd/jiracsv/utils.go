@@ -6,7 +6,9 @@ import (
 	"sort"
 	"strings"
 	"syscall"
+	"time"
 
+	"github.com/simon3z/jiracsv/analysis"
 	"github.com/simon3z/jiracsv/jira"
 	"golang.org/x/crypto/ssh/terminal"
 )
@@ -89,4 +91,30 @@ func googleSheetStoryPointsBar(value, max int, complete bool) string {
 	}
 
 	return googleSheetProgressBar(value, max)
+}
+
+func googleSheetCheckStatus(status analysis.CheckResultStatus) string {
+	if status == analysis.CheckStatusNone {
+		return "\u2014" // UTF-8 Dash
+	}
+
+	return status.String()
+}
+
+func googleSheetTime(time *time.Time) string {
+	if time == nil {
+		return "\u2014" // UTF-8 Dash
+	}
+
+	return time.Format("2006-01-02")
+}
+
+// MessagesString returns a string representing all messages
+func googleSheetSortedMessages(messages []string, sep string) string {
+	sortedMessages := make([]string, len(messages))
+
+	copy(sortedMessages, messages)
+	sort.Strings(sortedMessages)
+
+	return strings.Join(sortedMessages, sep)
 }
