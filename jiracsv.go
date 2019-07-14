@@ -29,6 +29,8 @@ func writeIssues(w *csv.Writer, component *string, issues []*jira.Issue) {
 			stories = stories.FilterByComponent(*component)
 		}
 
+		doneStories := stories.FilterDone()
+
 		w.Write([]string{
 			googleSheetLink(i.Link, i.Key),
 			i.Fields.Summary,
@@ -37,9 +39,9 @@ func writeIssues(w *csv.Writer, component *string, issues []*jira.Issue) {
 			i.Fields.Status.Name,
 			i.Owner,
 			i.QAContact,
-			i.AcksStatusString(),
-			stories.EpicsTotalStatusString(),
-			stories.EpicsTotalPointsString(),
+			googleSheetMark(i.Approvals.Approved()),
+			googleSheetProgressBar(doneStories.Len(), stories.Len()),
+			googleSheetProgressBar(doneStories.StoryPoints(), stories.StoryPoints()),
 		})
 	}
 }

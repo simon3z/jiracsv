@@ -2,7 +2,6 @@ package jira
 
 import (
 	"errors"
-	"fmt"
 	"net/http"
 	"time"
 
@@ -114,15 +113,6 @@ func (a *IssueApprovals) Approved() bool {
 	return a.Development == true && a.Product == true && a.Quality == true && a.Experience == true && a.Documentation == true
 }
 
-// AcksStatusString returns the Jira Issue Acks Status
-func (i *Issue) AcksStatusString() string {
-	if i.Approvals.Approved() {
-		return "\u2713" // UTF-8 Mark
-	}
-
-	return ""
-}
-
 // IsActive returns true if the issue is currently worked on
 func (i *Issue) IsActive() bool {
 	switch IssueStatus(i.Fields.Status.Name) {
@@ -189,28 +179,12 @@ func (i *Issue) HasStoryPoints() bool {
 	return false
 }
 
-// FilterByComponent returns jira issues from collection that belongs to a component
-func (c IssueCollection) FilterByComponent(component string) IssueCollection {
+// FilterByFunction returns jira issues from collection that satisfy the provided function
+func (c IssueCollection) FilterByFunction(fn func(*Issue) bool) IssueCollection {
 	r := NewIssueCollection(0)
 
 	for _, i := range c {
-		for _, t := range i.Fields.Components {
-			if t.Name == component {
-				r = append(r, i)
-				break
-			}
-		}
-	}
-
-	return r
-}
-
-// FilterNotObsolete returns jira issues from collection that are not obsolete
-func (c IssueCollection) FilterNotObsolete() IssueCollection {
-	r := NewIssueCollection(0)
-
-	for _, i := range c {
-		if !i.IsObsolete() {
+		if fn(i) {
 			r = append(r, i)
 		}
 	}
@@ -218,46 +192,46 @@ func (c IssueCollection) FilterNotObsolete() IssueCollection {
 	return r
 }
 
-// EpicsTotalStatusString returns the Jira Issues Collection Status
-func (c IssueCollection) EpicsTotalStatusString() string {
-	totalIssues := len(c)
-	completedIssues := 0
-
-	for _, i := range c {
-		if i.IsResolved() {
-			completedIssues++
+// FilterByComponent returns jira issues from collection that belongs to a component
+func (c IssueCollection) FilterByComponent(component string) IssueCollection {
+	return c.FilterByFunction(func(i *Issue) bool {
+		for _, t := range i.Fields.Components {
+			if t.Name == component {
+				return true
+			}
 		}
-	}
-
-	if totalIssues == 0 && completedIssues == 0 {
-		return ""
-	}
-
-	return fmt.Sprintf("%d/%d", completedIssues, totalIssues)
+		return false
+	})
 }
 
-// EpicsTotalPointsString returns the Jira Issues Collection Status
-func (c IssueCollection) EpicsTotalPointsString() string {
-	totalPoints := 0
-	incompletePointsMark := ""
-	completedPoints := 0
+// FilterNotObsolete returns jira issues from collection that are not obsolete
+func (c IssueCollection) FilterNotObsolete() IssueCollection {
+	return c.FilterByFunction(func(i *Issue) bool {
+		return !i.IsObsolete()
+	})
+}
+
+// FilterDone returns jira issues from collection that are done
+func (c IssueCollection) FilterDone() IssueCollection {
+	return c.FilterByFunction(func(i *Issue) bool {
+		return i.IsDone()
+	})
+}
+
+// Len returns the number of issues in the collection
+func (c IssueCollection) Len() int {
+	return len(c)
+}
+
+// StoryPoints returns the total number of story points for the issues in the collection
+func (c IssueCollection) StoryPoints() int {
+	points := 0
 
 	for _, i := range c {
-		if !i.HasStoryPoints() {
-			incompletePointsMark = "!"
-			continue
-		}
-
-		totalPoints += i.StoryPoints
-
-		if i.IsResolved() {
-			completedPoints += i.StoryPoints
+		if i.HasStoryPoints() {
+			points += i.StoryPoints
 		}
 	}
 
-	if totalPoints == 0 && completedPoints == 0 {
-		return ""
-	}
-
-	return fmt.Sprintf("%d/%d%s", completedPoints, totalPoints, incompletePointsMark)
+	return points
 }

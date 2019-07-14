@@ -59,3 +59,19 @@ func sortedIssuesMapKeys(m map[string][]*jira.Issue) []string {
 func googleSheetLink(link, text string) string {
 	return fmt.Sprintf("=HYPERLINK(\"%s\",\"%s\")", link, text)
 }
+
+func googleSheetMark(value bool) string {
+	if value {
+		return "\u2713" // UTF-8 Mark
+	}
+
+	return ""
+}
+
+func googleSheetProgressBar(value, max int) string {
+	if value > max || (max == 0 && value == 0) {
+		return "\u2014" // UTF-8 Dash
+	}
+
+	return fmt.Sprintf("=SPARKLINE({%d,%d},{\"charttype\",\"bar\";\"color1\",\"#93c47d\";\"color2\",\"#efefef\"})", value, max-value)
+}
