@@ -26,6 +26,9 @@ type Client struct {
 const (
 	// JiraTimeLayout represents the layout used to parse the Jira time
 	JiraTimeLayout = "2006-01-02T15:04:05.999-0700"
+
+	// NoStoryPoints is a special value used when no story points were set
+	NoStoryPoints int = -1
 )
 
 // NewClient creates and returns a new Jira Client
@@ -111,7 +114,7 @@ func (c *Client) FindIssues(jql string) (IssueCollection, error) {
 		clientURL := c.GetBaseURL()
 
 		for j, i := range issuesPage {
-			storyPoints := 0
+			storyPoints := NoStoryPoints
 
 			if val := i.Fields.Unknowns[c.CustomFieldID.StoryPoints]; val != nil {
 				storyPoints = int(val.(float64))

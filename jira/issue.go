@@ -100,6 +100,15 @@ func (i *Issue) AcksStatusString() string {
 	return ""
 }
 
+// HasStoryPoints returns true if the issue has story points defined
+func (i *Issue) HasStoryPoints() bool {
+	if i.StoryPoints > NoStoryPoints {
+		return true
+	}
+
+	return false
+}
+
 // FilterByComponent returns jira issues from collection that belongs to a component
 func (c IssueCollection) FilterByComponent(component string) IssueCollection {
 	r := NewIssueCollection(0)
@@ -154,7 +163,7 @@ func (c IssueCollection) EpicsTotalPointsString() string {
 	completedPoints := 0
 
 	for _, i := range c {
-		if i.StoryPoints == 0 {
+		if !i.HasStoryPoints() {
 			incompletePointsMark = "!"
 			continue
 		}
