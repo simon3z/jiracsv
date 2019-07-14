@@ -27,6 +27,7 @@ type Issue struct {
 	QAContact    string
 	Acceptance   string
 	Owner        string
+	Impediment   bool
 }
 
 // IssueCollection is a collection of Jira Issues

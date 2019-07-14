@@ -17,6 +17,7 @@ type Client struct {
 		AckFlags    string
 		QAContact   string
 		Acceptance  string
+		Flagged     string
 	}
 }
 
@@ -53,6 +54,8 @@ func NewClient(url string, username, password *string) (*Client, error) {
 			client.CustomFieldID.QAContact = f.ID
 		case "Acceptance Criteria":
 			client.CustomFieldID.Acceptance = f.ID
+		case "Flagged":
+			client.CustomFieldID.Flagged = f.ID
 		}
 	}
 
@@ -140,6 +143,17 @@ func (c *Client) FindIssues(jql string) (IssueCollection, error) {
 				deliveryOwner = i.Fields.Assignee.Name
 			}
 
+			impediment := false
+
+			if val := i.Fields.Unknowns[c.CustomFieldID.Flagged]; val != nil {
+				for _, f := range val.([]interface{}) {
+					switch f.(map[string]interface{})["value"].(string) {
+					case "Impediment":
+						impediment = true
+					}
+				}
+			}
+
 			issueURL := url.URL{
 				Scheme: clientURL.Scheme,
 				Host:   clientURL.Host,
@@ -155,6 +169,7 @@ func (c *Client) FindIssues(jql string) (IssueCollection, error) {
 				qaContact,
 				acceptanceCriteria,
 				deliveryOwner,
+				impediment,
 			}
 		}
 
