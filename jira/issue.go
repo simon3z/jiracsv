@@ -57,8 +57,23 @@ var (
 type IssueStatus string
 
 const (
+	// IssueStatusDone represents the Issue Status Done
+	IssueStatusDone IssueStatus = "Done"
+
 	// IssueStatusObsolete represents the Issue Status Done
 	IssueStatusObsolete IssueStatus = "Obsolete"
+
+	// IssueStatusInProgress represents the Issue Status Done
+	IssueStatusInProgress IssueStatus = "In Progress"
+
+	// IssueStatusFeatureComplete represents the Issue Status Done
+	IssueStatusFeatureComplete IssueStatus = "Feature Complete"
+
+	// IssueStatusCodeReview represents the Issue Status Done
+	IssueStatusCodeReview IssueStatus = "Code Review"
+
+	// IssueStatusQEReview represents the Issue Status Done
+	IssueStatusQEReview IssueStatus = "QE Review"
 )
 
 // IssueResolution represent an Issue Resolution
@@ -67,6 +82,14 @@ type IssueResolution string
 const (
 	// IssueResolutionDone represents the Issue Resolution Done
 	IssueResolutionDone IssueResolution = "Done"
+)
+
+// IssuePriority represent an Issue Resolution
+type IssuePriority string
+
+const (
+	// IssuePriorityUnprioritized represents the Issue Priority Unprioritized
+	IssuePriorityUnprioritized IssuePriority = "Unprioritized"
 )
 
 func jiraReturnError(ret *jira.Response, err error) error {
@@ -100,6 +123,63 @@ func (i *Issue) AcksStatusString() string {
 	return ""
 }
 
+// IsActive returns true if the issue is currently worked on
+func (i *Issue) IsActive() bool {
+	switch IssueStatus(i.Fields.Status.Name) {
+	case IssueStatusInProgress:
+		return true
+	case IssueStatusFeatureComplete:
+		return true
+	case IssueStatusCodeReview:
+		return true
+	case IssueStatusQEReview:
+		return true
+	}
+
+	return false
+}
+
+// IsDone returns true if the issue Status is Done
+func (i *Issue) IsDone() bool {
+	if i.Fields.Status != nil && IssueStatus(i.Fields.Status.Name) == IssueStatusDone {
+		return true
+	}
+
+	return false
+}
+
+// IsResolved returns true if the issue Resolution is Done
+func (i *Issue) IsResolved() bool {
+	if i.Fields.Resolution != nil && IssueResolution(i.Fields.Resolution.Name) == IssueResolutionDone {
+		return true
+	}
+
+	return false
+}
+
+// IsObsolete returns true if the issue Status is Obsolete
+func (i *Issue) IsObsolete() bool {
+	if i.Fields.Status != nil && IssueStatus(i.Fields.Status.Name) == IssueStatusObsolete {
+		return true
+	}
+
+	return false
+}
+
+// IsPrioritized returns true if the issue Priority has been set
+func (i *Issue) IsPrioritized() bool {
+	if i.Fields.Priority != nil {
+		switch IssuePriority(i.Fields.Priority.Name) {
+		case IssuePriorityUnprioritized:
+			return false
+		case "":
+			return false
+		}
+	}
+
+	return true
+}
+
 // HasStoryPoints returns true if the issue has story points defined
 func (i *Issue) HasStoryPoints() bool {
 	if i.StoryPoints > NoStoryPoints {
@@ -130,7 +210,7 @@ func (c IssueCollection) FilterNotObsolete() IssueCollection {
 	r := NewIssueCollection(0)
 
 	for _, i := range c {
-		if IssueStatus(i.Fields.Status.Name) != IssueStatusObsolete {
+		if !i.IsObsolete() {
 			r = append(r, i)
 		}
 	}
@@ -144,7 +224,7 @@ func (c IssueCollection) EpicsTotalStatusString() string {
 	completedIssues := 0
 
 	for _, i := range c {
-		if i.Fields.Resolution != nil && IssueResolution(i.Fields.Resolution.Name) == IssueResolutionDone {
+		if i.IsResolved() {
 			completedIssues++
 		}
 	}
@@ -170,7 +250,7 @@ func (c IssueCollection) EpicsTotalPointsString() string {
 
 		totalPoints += i.StoryPoints
 
-		if i.Fields.Resolution != nil && IssueResolution(i.Fields.Resolution.Name) == IssueResolutionDone {
+		if i.IsResolved() {
 			completedPoints += i.StoryPoints
 		}
 	}
