@@ -21,6 +21,7 @@ type IssueApprovals struct {
 type Issue struct {
 	jira.Issue
 	Link         string
+	ParentLink   string
 	LinkedIssues IssueCollection
 	StoryPoints  int
 	Approvals    IssueApprovals

@@ -13,6 +13,7 @@ import (
 type Client struct {
 	*jira.Client
 	CustomFieldID struct {
+		ParentLink  string
 		StoryPoints string
 		AckFlags    string
 		QAContact   string
@@ -46,6 +47,8 @@ func NewClient(url string, username, password *string) (*Client, error) {
 
 	for _, f := range fields {
 		switch f.Name {
+		case "Parent Link":
+			client.CustomFieldID.ParentLink = f.ID
 		case "Story Points":
 			client.CustomFieldID.StoryPoints = f.ID
 		case "5-Acks Check":
@@ -122,6 +125,12 @@ func (c *Client) FindIssues(jql string) (IssueCollection, error) {
 				}
 			}
 
+			parentLink := ""
+
+			if val := i.Fields.Unknowns[c.CustomFieldID.ParentLink]; val != nil {
+				parentLink = val.(string)
+			}
+
 			qaContact := ""
 
 			if val := i.Fields.Unknowns[c.CustomFieldID.QAContact]; val != nil {
@@ -163,6 +172,7 @@ func (c *Client) FindIssues(jql string) (IssueCollection, error) {
 			newIssues[len(issues)+j] = &Issue{
 				i,
 				issueURL.String(),
+				parentLink,
 				NewIssueCollection(0),
 				storyPoints,
 				issueApprovals,
