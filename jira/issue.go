@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"time"
 
 	jira "github.com/andygrunwald/go-jira"
 )
@@ -29,6 +30,14 @@ type Issue struct {
 	Acceptance   string
 	Owner        string
 	Impediment   bool
+	Comments     []*Comment
+}
+
+// Comment represents Jira Issue Comment
+type Comment struct {
+	*jira.Comment
+	Created time.Time
+	Updated time.Time
 }
 
 // IssueCollection is a collection of Jira Issues

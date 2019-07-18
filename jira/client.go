@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/url"
 	"regexp"
+	"time"
 
 	jira "github.com/andygrunwald/go-jira"
 )
@@ -21,6 +22,11 @@ type Client struct {
 		Flagged     string
 	}
 }
+
+const (
+	// JiraTimeLayout represents the layout used to parse the Jira time
+	JiraTimeLayout = "2006-01-02T15:04:05.999-0700"
+)
 
 // NewClient creates and returns a new Jira Client
 func NewClient(url string, username, password *string) (*Client, error) {
@@ -81,7 +87,12 @@ func (c *Client) FindIssues(jql string) (IssueCollection, error) {
 	issues := NewIssueCollection(0)
 
 	for {
-		issuesPage, ret, err := c.Issue.Search(jql, &jira.SearchOptions{StartAt: len(issues), MaxResults: 50})
+		issuesPage, ret, err := c.Issue.Search(jql, &jira.SearchOptions{
+			StartAt:       len(issues),
+			MaxResults:    50,
+			ValidateQuery: "strict",
+			Fields:        []string{"*all"},
+		})
 
 		if err := jiraReturnError(ret, err); err != nil {
 			return nil, err
@@ -169,6 +180,28 @@ func (c *Client) FindIssues(jql string) (IssueCollection, error) {
 				Path:   clientURL.Path + "browse/" + i.Key,
 			}
 
+			issueComments := []*Comment{}
+
+			for _, c := range i.Fields.Comments.Comments {
+				commentCreateTime, err := time.Parse(JiraTimeLayout, c.Created)
+
+				if err != nil {
+					return nil, err
+				}
+
+				commentUpdateTime, err := time.Parse(JiraTimeLayout, c.Updated)
+
+				if err != nil {
+					return nil, err
+				}
+
+				issueComments = append(issueComments, &Comment{
+					Comment: c,
+					Created: commentCreateTime,
+					Updated: commentUpdateTime,
+				})
+			}
+
 			newIssues[len(issues)+j] = &Issue{
 				i,
 				issueURL.String(),
@@ -180,6 +213,7 @@ func (c *Client) FindIssues(jql string) (IssueCollection, error) {
 				acceptanceCriteria,
 				deliveryOwner,
 				impediment,
+				issueComments,
 			}
 		}
 
