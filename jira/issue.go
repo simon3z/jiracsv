@@ -40,6 +40,22 @@ var (
 	ErrorAuthentication = errors.New("Access Unauthorized: check basic authentication")
 )
 
+// IssueStatus represent an Issue Status
+type IssueStatus string
+
+const (
+	// IssueStatusObsolete represents the Issue Status Done
+	IssueStatusObsolete IssueStatus = "Obsolete"
+)
+
+// IssueResolution represent an Issue Resolution
+type IssueResolution string
+
+const (
+	// IssueResolutionDone represents the Issue Resolution Done
+	IssueResolutionDone IssueResolution = "Done"
+)
+
 func jiraReturnError(ret *jira.Response, err error) error {
 	if err == nil {
 		return nil
@@ -112,7 +128,7 @@ func (c IssueCollection) FilterNotObsolete() IssueCollection {
 	r := NewIssueCollection(0)
 
 	for _, i := range c {
-		if i.Fields.Status.Name != "Obsolete" {
+		if IssueStatus(i.Fields.Status.Name) != IssueStatusObsolete {
 			r = append(r, i)
 		}
 	}
@@ -126,7 +142,7 @@ func (c IssueCollection) EpicsTotalStatusString() string {
 	completedIssues := 0
 
 	for _, i := range c {
-		if i.Fields.Resolution != nil && i.Fields.Resolution.Name == "Done" {
+		if i.Fields.Resolution != nil && IssueResolution(i.Fields.Resolution.Name) == IssueResolutionDone {
 			completedIssues++
 		}
 	}
@@ -152,7 +168,7 @@ func (c IssueCollection) EpicsTotalPointsString() string {
 
 		totalPoints += i.StoryPoints
 
-		if i.Fields.Resolution != nil && i.Fields.Resolution.Name == "Done" {
+		if i.Fields.Resolution != nil && IssueResolution(i.Fields.Resolution.Name) == IssueResolutionDone {
 			completedPoints += i.StoryPoints
 		}
 	}
