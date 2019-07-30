@@ -23,13 +23,28 @@ func init() {
 
 func writeIssues(w *csv.Writer, component *string, issues []*jira.Issue) {
 	for _, i := range issues {
-		stories := i.LinkedIssues.FilterNotObsolete()
+		stories := i.LinkedIssues.FilterByFunction(func(i *jira.Issue) bool {
+			if i.Fields.Status != nil && jira.IssueStatus(i.Fields.Status.Name) == jira.IssueStatusObsolete {
+				return false
+			}
+			return true
+		})
 
 		if component != nil {
-			stories = stories.FilterByComponent(*component)
+			stories = stories.FilterByFunction(func(i *jira.Issue) bool {
+				if i.HasComponent(*component) {
+					return true
+				}
+				return false
+			})
 		}
 
-		doneStories := stories.FilterDone()
+		doneStories := stories.FilterByFunction(func(i *jira.Issue) bool {
+			if i.Fields.Status != nil && jira.IssueStatus(i.Fields.Status.Name) == jira.IssueStatusDone {
+				return true
+			}
+			return false
+		})
 
 		w.Write([]string{
 			googleSheetLink(i.Link, i.Key),

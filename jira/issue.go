@@ -52,6 +52,23 @@ var (
 	ErrorAuthentication = errors.New("Access Unauthorized: check basic authentication")
 )
 
+// IssueType represent an Issue Type
+type IssueType string
+
+const (
+	// IssueTypeInitiative represents the Issue Type Initiative
+	IssueTypeInitiative IssueType = "Initiative"
+
+	// IssueTypeEpic represents the Issue Type Epic
+	IssueTypeEpic IssueType = "Epic"
+
+	// IssueTypeStory represents the Issue Type Story
+	IssueTypeStory IssueType = "Story"
+
+	// IssueTypeTask represents the Issue Type Task
+	IssueTypeTask IssueType = "Task"
+)
+
 // IssueStatus represent an Issue Status
 type IssueStatus string
 
@@ -129,27 +146,23 @@ func (i *Issue) IsActive() bool {
 	return false
 }
 
-// IsDone returns true if the issue Status is Done
-func (i *Issue) IsDone() bool {
-	if i.Fields.Status != nil && IssueStatus(i.Fields.Status.Name) == IssueStatusDone {
+// IsType returns true if the issue is of the relevant type
+func (i *Issue) IsType(tp IssueType) bool {
+	if IssueType(i.Issue.Fields.Type.Name) == tp {
 		return true
 	}
 
 	return false
+}
+
+// InStatus returns true if the issue is in the relevant status
+func (i *Issue) InStatus(status IssueStatus) bool {
+	return i.Fields.Status != nil && IssueStatus(i.Fields.Status.Name) == status
 }
 
 // IsResolved returns true if the issue Resolution is Done
 func (i *Issue) IsResolved() bool {
 	if i.Fields.Resolution != nil && IssueResolution(i.Fields.Resolution.Name) == IssueResolutionDone {
-		return true
-	}
-
-	return false
-}
-
-// IsObsolete returns true if the issue Status is Obsolete
-func (i *Issue) IsObsolete() bool {
-	if i.Fields.Status != nil && IssueStatus(i.Fields.Status.Name) == IssueStatusObsolete {
 		return true
 	}
 
@@ -179,6 +192,21 @@ func (i *Issue) HasStoryPoints() bool {
 	return false
 }
 
+// HasComponent returns true if the issue has the relevant component
+func (i *Issue) HasComponent(component string) bool {
+	if i.Fields.Components == nil {
+		return false
+	}
+
+	for _, c := range i.Fields.Components {
+		if c.Name == component {
+			return true
+		}
+	}
+
+	return false
+}
+
 // FilterByFunction returns jira issues from collection that satisfy the provided function
 func (c IssueCollection) FilterByFunction(fn func(*Issue) bool) IssueCollection {
 	r := NewIssueCollection(0)
@@ -190,32 +218,6 @@ func (c IssueCollection) FilterByFunction(fn func(*Issue) bool) IssueCollection 
 	}
 
 	return r
-}
-
-// FilterByComponent returns jira issues from collection that belongs to a component
-func (c IssueCollection) FilterByComponent(component string) IssueCollection {
-	return c.FilterByFunction(func(i *Issue) bool {
-		for _, t := range i.Fields.Components {
-			if t.Name == component {
-				return true
-			}
-		}
-		return false
-	})
-}
-
-// FilterNotObsolete returns jira issues from collection that are not obsolete
-func (c IssueCollection) FilterNotObsolete() IssueCollection {
-	return c.FilterByFunction(func(i *Issue) bool {
-		return !i.IsObsolete()
-	})
-}
-
-// FilterDone returns jira issues from collection that are done
-func (c IssueCollection) FilterDone() IssueCollection {
-	return c.FilterByFunction(func(i *Issue) bool {
-		return i.IsDone()
-	})
 }
 
 // Len returns the number of issues in the collection
