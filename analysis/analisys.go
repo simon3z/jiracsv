@@ -50,7 +50,8 @@ func AnalyzeIssue(issue *jira.Issue, component *string) *IssueAnalysis {
 	if component != nil && *component != "" {
 		linkedIssues = allLinkedIssues.FilterByFunction(
 			func(i *jira.Issue) bool {
-				return i.HasComponent(*component)
+				return i.HasComponent(*component) && !i.IsType(jira.IssueTypeEpic)
+
 			},
 		)
 	} else {
