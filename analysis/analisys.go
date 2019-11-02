@@ -168,6 +168,12 @@ func (a *IssueAnalysis) CheckStatus() *CheckResult {
 		result.SetReady(false).AddMessage("ISSUENOCOMPONENT")
 	}
 
+	for _, label := range a.Issue.Issue.Fields.Labels {
+		if label == "grooming" {
+			result.SetReady(false).AddMessage("GROOMING")
+		}
+	}
+
 	/*
 		for _, i := range linkedIssues {
 			if i.Owner == "" && i.Fields.Sprint.Name != "" {
