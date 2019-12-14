@@ -55,9 +55,9 @@ func writeIssues(w *csv.Writer, component *string, issues []*jira.Issue) {
 			i.Fields.Status.Name,
 			i.Owner,
 			i.QAContact,
-			googleSheetMark(i.Approvals.Approved()),
+			googleSheetBallot(i.Approvals.Approved()),
 			googleSheetProgressBar(doneStories.Len(), stories.Len()),
-			googleSheetProgressBar(doneStories.StoryPoints(), stories.StoryPoints()),
+			googleSheetStoryPointsBar(doneStories.StoryPoints(), stories.StoryPoints(), true),
 		})
 	}
 }

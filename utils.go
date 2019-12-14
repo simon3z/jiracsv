@@ -60,12 +60,12 @@ func googleSheetLink(link, text string) string {
 	return fmt.Sprintf("=HYPERLINK(\"%s\",\"%s\")", link, text)
 }
 
-func googleSheetMark(value bool) string {
+func googleSheetBallot(value bool) string {
 	if value {
 		return "\u2713" // UTF-8 Mark
 	}
 
-	return ""
+	return "\u2717"
 }
 
 func googleSheetProgressBar(value, max int) string {
@@ -74,4 +74,12 @@ func googleSheetProgressBar(value, max int) string {
 	}
 
 	return fmt.Sprintf("=SPARKLINE({%d,%d},{\"charttype\",\"bar\";\"color1\",\"#93c47d\";\"color2\",\"#efefef\"})", value, max-value)
+}
+
+func googleSheetStoryPointsBar(value, max int, complete bool) string {
+	if !complete {
+		return "\u2014" // UTF-8 Dash
+	}
+
+	return googleSheetProgressBar(value, max)
 }
