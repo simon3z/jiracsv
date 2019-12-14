@@ -4,6 +4,7 @@ import (
 	"encoding/csv"
 	"flag"
 	"fmt"
+	"log"
 	"os"
 
 	"io.bytenix.com/jiracsv/jira"
@@ -100,9 +101,9 @@ func main() {
 		componentIssues.Add(c)
 	}
 
-	fmt.Fprintf(os.Stdout, "JQL = %s\n", profile.JQL)
-
+	log.Printf("JQL = %s\n", profile.JQL)
 	issues, err := jiraClient.FindEpics(profile.JQL)
+	log.Printf("JQL returned issues: %d", issues.Len())
 
 	if err != nil {
 		panic(err)
