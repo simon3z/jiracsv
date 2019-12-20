@@ -207,6 +207,36 @@ func (i *Issue) HasComponent(component string) bool {
 	return false
 }
 
+// HasLabel returns true if the issue has the relevant label
+func (i *Issue) HasLabel(label string) bool {
+	if i.Fields.Labels == nil {
+		return false
+	}
+
+	for _, l := range i.Fields.Labels {
+		if l == label {
+			return true
+		}
+	}
+
+	return false
+}
+
+// HasAnyImpediment returns whether this issue or any linked one has any impediment
+func (i *Issue) HasAnyImpediment() bool {
+	if i.Impediment {
+		return true
+	}
+
+	for _, j := range i.LinkedIssues {
+		if j.HasAnyImpediment() {
+			return true
+		}
+	}
+
+	return false
+}
+
 // FilterByFunction returns jira issues from collection that satisfy the provided function
 func (c IssueCollection) FilterByFunction(fn func(*Issue) bool) IssueCollection {
 	r := NewIssueCollection(0)
