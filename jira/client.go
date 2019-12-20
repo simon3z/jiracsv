@@ -243,19 +243,23 @@ func (c *Client) FindEpics(jql string) (IssueCollection, error) {
 
 	ch := make(chan error)
 
-	for _, i := range issues {
+	epics := issues.FilterByFunction(func(i *Issue) bool {
+		return i.IsType(IssueTypeEpic)
+	})
+
+	for _, i := range epics {
 		go func(i *Issue, ch chan<- error) {
-			epics, err := c.FindIssues(fmt.Sprintf("issueFunction in issuesInEpics(\"Key = %s\") ORDER BY Key ASC", i.Key))
+			linkedIssues, err := c.FindIssues(fmt.Sprintf("issueFunction in issuesInEpics(\"Key = %s\") ORDER BY Key ASC", i.Key))
 
 			if err == nil {
-				i.LinkedIssues = epics
+				i.LinkedIssues = linkedIssues
 			}
 
 			ch <- err
 		}(i, ch)
 	}
 
-	for range issues {
+	for range epics {
 		if err := <-ch; err != nil {
 			return nil, err
 		}
