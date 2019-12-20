@@ -15,6 +15,7 @@ type Client struct {
 	*jira.Client
 	CustomFieldID struct {
 		ParentLink  string
+		EpicLink    string
 		StoryPoints string
 		AckFlags    string
 		QAContact   string
@@ -58,6 +59,8 @@ func NewClient(url string, username, password *string) (*Client, error) {
 		switch f.Name {
 		case "Parent Link":
 			client.CustomFieldID.ParentLink = f.ID
+		case "Epic Link":
+			client.CustomFieldID.EpicLink = f.ID
 		case "Story Points":
 			client.CustomFieldID.StoryPoints = f.ID
 		case "5-Acks Check":
@@ -143,6 +146,10 @@ func (c *Client) FindIssues(jql string) (IssueCollection, error) {
 
 			if val := i.Fields.Unknowns[c.CustomFieldID.ParentLink]; val != nil {
 				parentLink = val.(string)
+			}
+
+			if val := i.Fields.Unknowns[c.CustomFieldID.EpicLink]; i.Fields.Epic == nil && val != nil {
+				i.Fields.Epic = &jira.Epic{Key: val.(string)}
 			}
 
 			qaContact := ""
