@@ -38,3 +38,14 @@ func (c IssueCollection) StoryPoints() int {
 
 	return points
 }
+
+// AnyImpediment returns if any of the issues has an impediment
+func (c IssueCollection) AnyImpediment() bool {
+	for _, i := range c {
+		if i.Impediment {
+			return true
+		}
+	}
+
+	return false
+}

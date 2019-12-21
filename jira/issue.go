@@ -213,18 +213,3 @@ func (i *Issue) HasLabel(label string) bool {
 
 	return false
 }
-
-// HasAnyImpediment returns whether this issue or any linked one has any impediment
-func (i *Issue) HasAnyImpediment() bool {
-	if i.Impediment {
-		return true
-	}
-
-	for _, j := range i.LinkedIssues {
-		if j.HasAnyImpediment() {
-			return true
-		}
-	}
-
-	return false
-}
