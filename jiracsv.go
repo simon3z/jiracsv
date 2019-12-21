@@ -40,12 +40,8 @@ func writeIssues(w *csv.Writer, component *string, issues []*jira.Issue) {
 			})
 		}
 
-		doneStories := stories.FilterByFunction(func(i *jira.Issue) bool {
-			if i.Fields.Status != nil && jira.IssueStatus(i.Fields.Status.Name) == jira.IssueStatusDone {
-				return true
-			}
-			return false
-		})
+		storiesProgress := stories.Progress()
+		storyPointsProgress := stories.StoryPointsProgress()
 
 		w.Write([]string{
 			googleSheetLink(i.Link, i.Key),
@@ -56,8 +52,8 @@ func writeIssues(w *csv.Writer, component *string, issues []*jira.Issue) {
 			i.Owner,
 			i.QAContact,
 			googleSheetBallot(i.Approvals.Approved()),
-			googleSheetProgressBar(len(doneStories), len(stories)),
-			googleSheetStoryPointsBar(doneStories.StoryPoints(), stories.StoryPoints(), true),
+			googleSheetProgressBar(storiesProgress.Status, storiesProgress.Total),
+			googleSheetStoryPointsBar(storyPointsProgress.Status, storyPointsProgress.Total, storyPointsProgress.Unknown == 0),
 		})
 	}
 }

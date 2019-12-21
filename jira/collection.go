@@ -44,3 +44,45 @@ func (c IssueCollection) AnyImpediment() bool {
 
 	return false
 }
+
+// Progress returns the progress of the issues in the collection
+func (c IssueCollection) Progress() Progress {
+	p := Progress{Total: 0, Status: 0, Unknown: 0}
+
+	for _, i := range c {
+		if i.InStatus(IssueStatusObsolete) {
+			continue
+		}
+
+		p.Total = p.Total + 1
+
+		if i.IsResolved() {
+			p.Status = p.Status + 1
+		}
+	}
+
+	return p
+}
+
+// StoryPointsProgress returns the progress of the story points of the issues in the collection
+func (c IssueCollection) StoryPointsProgress() Progress {
+	p := Progress{Total: 0, Status: 0, Unknown: 0}
+
+	for _, i := range c {
+		if !i.IsType(IssueTypeStory) || i.InStatus(IssueStatusObsolete) {
+			continue
+		}
+
+		if i.HasStoryPoints() {
+			p.Total = p.Total + i.StoryPoints
+
+			if i.IsResolved() {
+				p.Status = p.Status + i.StoryPoints
+			}
+		} else {
+			p.Unknown = p.Unknown + 1
+		}
+	}
+
+	return p
+}
