@@ -39,9 +39,6 @@ type Comment struct {
 	Updated time.Time
 }
 
-// IssueCollection is a collection of Jira Issues
-type IssueCollection []*Issue
-
 const (
 	// DeliveryOwnerRegExp is the Regular Expression used to collect the Epic Delivery Owner
 	DeliveryOwnerRegExp = `\W*(Delivery Owner|DELIVERY OWNER)\W*:\W*\[~([a-zA-Z0-9]*)\]`
@@ -118,11 +115,6 @@ func jiraReturnError(ret *jira.Response, err error) error {
 	}
 
 	return err
-}
-
-// NewIssueCollection creates and returns a new Jira Issue Collection
-func NewIssueCollection(size int) IssueCollection {
-	return make([]*Issue, size)
 }
 
 // Approved returns true if all approvals are true
@@ -235,35 +227,4 @@ func (i *Issue) HasAnyImpediment() bool {
 	}
 
 	return false
-}
-
-// FilterByFunction returns jira issues from collection that satisfy the provided function
-func (c IssueCollection) FilterByFunction(fn func(*Issue) bool) IssueCollection {
-	r := NewIssueCollection(0)
-
-	for _, i := range c {
-		if fn(i) {
-			r = append(r, i)
-		}
-	}
-
-	return r
-}
-
-// Len returns the number of issues in the collection
-func (c IssueCollection) Len() int {
-	return len(c)
-}
-
-// StoryPoints returns the total number of story points for the issues in the collection
-func (c IssueCollection) StoryPoints() int {
-	points := 0
-
-	for _, i := range c {
-		if i.HasStoryPoints() {
-			points += i.StoryPoints
-		}
-	}
-
-	return points
 }
