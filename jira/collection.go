@@ -21,11 +21,6 @@ func (c IssueCollection) FilterByFunction(fn func(*Issue) bool) IssueCollection 
 	return r
 }
 
-// Len returns the number of issues in the collection
-func (c IssueCollection) Len() int {
-	return len(c)
-}
-
 // StoryPoints returns the total number of story points for the issues in the collection
 func (c IssueCollection) StoryPoints() int {
 	points := 0

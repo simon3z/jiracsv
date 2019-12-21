@@ -56,7 +56,7 @@ func writeIssues(w *csv.Writer, component *string, issues []*jira.Issue) {
 			i.Owner,
 			i.QAContact,
 			googleSheetBallot(i.Approvals.Approved()),
-			googleSheetProgressBar(doneStories.Len(), stories.Len()),
+			googleSheetProgressBar(len(doneStories), len(stories)),
 			googleSheetStoryPointsBar(doneStories.StoryPoints(), stories.StoryPoints(), true),
 		})
 	}
@@ -103,7 +103,7 @@ func main() {
 
 	log.Printf("JQL = %s\n", profile.JQL)
 	issues, err := jiraClient.FindEpics(profile.JQL)
-	log.Printf("JQL returned issues: %d", issues.Len())
+	log.Printf("JQL returned issues: %d", len(issues))
 
 	if err != nil {
 		panic(err)
