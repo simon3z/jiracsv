@@ -32,6 +32,7 @@ type Issue struct {
 	StoryPoints  int
 	Approvals    IssueApprovals
 	Planning     IssuePlanning
+	Design       string
 	QAContact    string
 	Acceptance   string
 	Owner        string

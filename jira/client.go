@@ -22,6 +22,7 @@ type Client struct {
 		Acceptance  string
 		Flagged     string
 		Planning    string
+		Design      string
 	}
 }
 
@@ -74,6 +75,8 @@ func NewClient(url string, username, password *string) (*Client, error) {
 			client.CustomFieldID.Flagged = f.ID
 		case "OpenShift Planning":
 			client.CustomFieldID.Planning = f.ID
+		case "Design Doc":
+			client.CustomFieldID.Design = f.ID
 		}
 	}
 
@@ -160,6 +163,12 @@ func (c *Client) FindIssues(jql string) (IssueCollection, error) {
 				}
 			}
 
+			designLink := ""
+
+			if val := i.Fields.Unknowns[c.CustomFieldID.Design]; val != nil {
+				designLink = val.(string)
+			}
+
 			parentLink := ""
 
 			if val := i.Fields.Unknowns[c.CustomFieldID.ParentLink]; val != nil {
@@ -238,6 +247,7 @@ func (c *Client) FindIssues(jql string) (IssueCollection, error) {
 				storyPoints,
 				issueApprovals,
 				issuePlanning,
+				designLink,
 				qaContact,
 				acceptanceCriteria,
 				deliveryOwner,
