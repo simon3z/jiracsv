@@ -17,6 +17,12 @@ type IssueApprovals struct {
 	Documentation bool
 }
 
+type IssuePlanning struct {
+	NoFeature bool
+	NoDoc     bool
+	NoQE      bool
+}
+
 // Issue represents a Jira Issue
 type Issue struct {
 	jira.Issue
@@ -25,6 +31,7 @@ type Issue struct {
 	LinkedIssues IssueCollection
 	StoryPoints  int
 	Approvals    IssueApprovals
+	Planning     IssuePlanning
 	QAContact    string
 	Acceptance   string
 	Owner        string

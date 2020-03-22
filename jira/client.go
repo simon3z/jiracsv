@@ -21,6 +21,7 @@ type Client struct {
 		QAContact   string
 		Acceptance  string
 		Flagged     string
+		Planning    string
 	}
 }
 
@@ -71,6 +72,8 @@ func NewClient(url string, username, password *string) (*Client, error) {
 			client.CustomFieldID.Acceptance = f.ID
 		case "Flagged":
 			client.CustomFieldID.Flagged = f.ID
+		case "OpenShift Planning":
+			client.CustomFieldID.Planning = f.ID
 		}
 	}
 
@@ -138,6 +141,21 @@ func (c *Client) FindIssues(jql string) (IssueCollection, error) {
 						issueApprovals.Experience = true
 					case "doc_ack":
 						issueApprovals.Documentation = true
+					}
+				}
+			}
+
+			issuePlanning := IssuePlanning{false, false, false}
+
+			if val := i.Fields.Unknowns[c.CustomFieldID.Planning]; val != nil {
+				for _, p := range val.([]interface{}) {
+					switch p.(map[string]interface{})["value"].(string) {
+					case "no-feature":
+						issuePlanning.NoFeature = true
+					case "no-doc":
+						issuePlanning.NoDoc = true
+					case "no-qe":
+						issuePlanning.NoQE = true
 					}
 				}
 			}
@@ -219,6 +237,7 @@ func (c *Client) FindIssues(jql string) (IssueCollection, error) {
 				NewIssueCollection(0),
 				storyPoints,
 				issueApprovals,
+				issuePlanning,
 				qaContact,
 				acceptanceCriteria,
 				deliveryOwner,
