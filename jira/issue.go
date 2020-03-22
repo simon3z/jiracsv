@@ -64,6 +64,9 @@ const (
 
 	// IssueTypeTask represents the Issue Type Task
 	IssueTypeTask IssueType = "Task"
+
+	// IssueTypeBug represents the Issue Type Bug
+	IssueTypeBug IssueType = "Bug"
 )
 
 // IssueStatus represent an Issue Status
