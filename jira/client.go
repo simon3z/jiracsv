@@ -129,22 +129,23 @@ func (c *Client) FindIssues(jql string) (IssueCollection, error) {
 				storyPoints = int(val.(float64))
 			}
 
-			issueApprovals := IssueApprovals{false, false, false, false, false}
+			issueApprovals := IssueApprovals{false, false, false, false, false, false}
 
-			if val := i.Fields.Unknowns[c.CustomFieldID.AckFlags]; val != nil {
-				for _, p := range val.([]interface{}) {
-					switch p.(map[string]interface{})["value"].(string) {
-					case "devel_ack":
-						issueApprovals.Development = true
-					case "pm_ack":
-						issueApprovals.Product = true
-					case "qa_ack":
-						issueApprovals.Quality = true
-					case "ux_ack":
-						issueApprovals.Experience = true
-					case "doc_ack":
-						issueApprovals.Documentation = true
-					}
+			if i.Fields.FixVersions != nil && len(i.Fields.FixVersions) > 0 {
+				issueApprovals.Development = true
+				issueApprovals.Product = true
+			}
+
+			for _, l := range i.Fields.Labels {
+				switch l {
+				case "doc-ack":
+					issueApprovals.Documentation = true
+				case "px-ack":
+					issueApprovals.Support = true
+				case "qe-ack":
+					issueApprovals.Quality = true
+				case "uxd-ack":
+					issueApprovals.Experience = true
 				}
 			}
 

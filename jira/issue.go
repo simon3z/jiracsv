@@ -15,8 +15,10 @@ type IssueApprovals struct {
 	Quality       bool
 	Experience    bool
 	Documentation bool
+	Support       bool
 }
 
+// IssuePlanning represents a Jira Issue Planning
 type IssuePlanning struct {
 	NoFeature bool
 	NoDoc     bool
@@ -128,11 +130,6 @@ func jiraReturnError(ret *jira.Response, err error) error {
 	return err
 }
 
-// Approved returns true if all approvals are true
-func (a *IssueApprovals) Approved() bool {
-	return a.Development == true && a.Product == true && a.Quality == true && a.Experience == true && a.Documentation == true
-}
-
 // IsActive returns true if the issue is currently worked on
 func (i *Issue) IsActive() bool {
 	switch IssueStatus(i.Fields.Status.Name) {
@@ -223,4 +220,25 @@ func (i *Issue) HasLabel(label string) bool {
 	}
 
 	return false
+}
+
+// Approved returns true the issue planning was approved
+func (i *Issue) Approved() bool {
+	if !i.Approvals.Development || !i.Approvals.Product {
+		return false
+	}
+
+	if !i.Planning.NoDoc && !i.Approvals.Documentation {
+		return false
+	}
+
+	if !i.Planning.NoQE && !i.Approvals.Quality {
+		return false
+	}
+
+	if !i.Planning.NoFeature && !i.Approvals.Support {
+		return false
+	}
+
+	return true
 }
