@@ -1,7 +1,7 @@
 package main
 
 import (
-	"io.bytenix.com/jiracsv/jira"
+	"github.com/simon3z/jiracsv/jira"
 )
 
 // ComponentIssues contain issues of the relevant component

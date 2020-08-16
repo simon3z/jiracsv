@@ -7,8 +7,8 @@ import (
 	"strings"
 	"syscall"
 
+	"github.com/simon3z/jiracsv/jira"
 	"golang.org/x/crypto/ssh/terminal"
-	"io.bytenix.com/jiracsv/jira"
 )
 
 // ArrayFlag is used for command line flags with multiple values

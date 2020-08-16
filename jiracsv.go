@@ -7,7 +7,7 @@ import (
 	"log"
 	"os"
 
-	"io.bytenix.com/jiracsv/jira"
+	"github.com/simon3z/jiracsv/jira"
 )
 
 var commandFlags = struct {
