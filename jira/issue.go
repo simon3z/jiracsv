@@ -8,8 +8,8 @@ import (
 	jira "github.com/andygrunwald/go-jira"
 )
 
-// IssueApprovals represents a Jira Issue Approvals
-type IssueApprovals struct {
+// IssueReadiness represents a Jira Issue Approvals
+type IssueReadiness struct {
 	Development   bool
 	Product       bool
 	Quality       bool
@@ -32,10 +32,10 @@ type Issue struct {
 	ParentLink   string
 	LinkedIssues IssueCollection
 	StoryPoints  int
-	Approvals    IssueApprovals
+	Readiness    IssueReadiness
 	Planning     IssuePlanning
 	Design       string
-	QAContact    string
+	QEAssignee   string
 	Acceptance   string
 	Owner        string
 	Impediment   bool
@@ -222,23 +222,8 @@ func (i *Issue) HasLabel(label string) bool {
 	return false
 }
 
-// Approved returns true the issue planning was approved
-func (i *Issue) Approved() bool {
-	if !i.Approvals.Development || !i.Approvals.Product {
-		return false
-	}
-
-	if !i.Planning.NoDoc && !i.Approvals.Documentation {
-		return false
-	}
-
-	if !i.Planning.NoQE && !i.Approvals.Quality {
-		return false
-	}
-
-	if !i.Planning.NoFeature && !i.Approvals.Support {
-		return false
-	}
-
-	return true
+// Ready returns true if the issue is Ready-Ready
+func (i *Issue) Ready() bool {
+	return (i.Readiness.Development && i.Readiness.Product && i.Readiness.Quality &&
+		i.Readiness.Experience && i.Readiness.Documentation && i.Readiness.Support)
 }

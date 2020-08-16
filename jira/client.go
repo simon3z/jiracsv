@@ -18,10 +18,11 @@ type Client struct {
 		EpicLink    string
 		StoryPoints string
 		AckFlags    string
-		QAContact   string
+		QEAssignee  string
 		Acceptance  string
 		Flagged     string
 		Planning    string
+		Readiness   string
 		Design      string
 	}
 }
@@ -67,14 +68,16 @@ func NewClient(url string, username, password *string) (*Client, error) {
 			client.CustomFieldID.StoryPoints = f.ID
 		case "5-Acks Check":
 			client.CustomFieldID.AckFlags = f.ID
-		case "QA Contact":
-			client.CustomFieldID.QAContact = f.ID
+		case "QE Assignee":
+			client.CustomFieldID.QEAssignee = f.ID
 		case "Acceptance Criteria":
 			client.CustomFieldID.Acceptance = f.ID
 		case "Flagged":
 			client.CustomFieldID.Flagged = f.ID
 		case "OpenShift Planning":
 			client.CustomFieldID.Planning = f.ID
+		case "Ready-Ready":
+			client.CustomFieldID.Readiness = f.ID
 		case "Design Doc":
 			client.CustomFieldID.Design = f.ID
 		}
@@ -129,23 +132,29 @@ func (c *Client) FindIssues(jql string) (IssueCollection, error) {
 				storyPoints = int(val.(float64))
 			}
 
-			issueApprovals := IssueApprovals{false, false, false, false, false, false}
+			issueReadiness := IssueReadiness{false, false, false, false, false, false}
 
 			if i.Fields.FixVersions != nil && len(i.Fields.FixVersions) > 0 {
-				issueApprovals.Development = true
-				issueApprovals.Product = true
+				issueReadiness.Development = true
+				issueReadiness.Product = true
 			}
 
-			for _, l := range i.Fields.Labels {
-				switch l {
-				case "doc-ack":
-					issueApprovals.Documentation = true
-				case "px-ack":
-					issueApprovals.Support = true
-				case "qe-ack":
-					issueApprovals.Quality = true
-				case "uxd-ack":
-					issueApprovals.Experience = true
+			if val := i.Fields.Unknowns[c.CustomFieldID.Readiness]; val != nil {
+				for _, r := range val.([]interface{}) {
+					switch r.(map[string]interface{})["value"].(string) {
+					case "dev-ready":
+						issueReadiness.Development = true
+					case "pm-ready":
+						issueReadiness.Product = true
+					case "doc-ready":
+						issueReadiness.Documentation = true
+					case "px-ready":
+						issueReadiness.Support = true
+					case "qa-ready":
+						issueReadiness.Quality = true
+					case "ux-ready":
+						issueReadiness.Experience = true
+					}
 				}
 			}
 
@@ -180,10 +189,10 @@ func (c *Client) FindIssues(jql string) (IssueCollection, error) {
 				i.Fields.Epic = &jira.Epic{Key: val.(string)}
 			}
 
-			qaContact := ""
+			qeAssignee := ""
 
-			if val := i.Fields.Unknowns[c.CustomFieldID.QAContact]; val != nil {
-				qaContact = (val.(map[string]interface{})["key"]).(string)
+			if val := i.Fields.Unknowns[c.CustomFieldID.QEAssignee]; val != nil {
+				qeAssignee = (val.(map[string]interface{})["key"]).(string)
 			}
 
 			acceptanceCriteria := ""
@@ -246,10 +255,10 @@ func (c *Client) FindIssues(jql string) (IssueCollection, error) {
 				parentLink,
 				NewIssueCollection(0),
 				storyPoints,
-				issueApprovals,
+				issueReadiness,
 				issuePlanning,
 				designLink,
-				qaContact,
+				qeAssignee,
 				acceptanceCriteria,
 				deliveryOwner,
 				impediment,
