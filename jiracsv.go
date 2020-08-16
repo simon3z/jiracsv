@@ -69,6 +69,10 @@ func main() {
 		panic(fmt.Errorf("profile id file not specified"))
 	}
 
+	if commandFlags.Username == "" {
+		panic(fmt.Errorf("jira username not specified"))
+	}
+
 	config, err := ReadConfigFile(commandFlags.Configuration)
 
 	if err != nil {
