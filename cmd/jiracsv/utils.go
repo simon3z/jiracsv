@@ -25,7 +25,7 @@ func (i *ArrayFlag) Set(value string) error {
 }
 
 // GetPassword gets the password either form an environment variable or interactively
-func GetPassword(env string, interactive bool) string {
+func GetPassword(env string, interactive bool) (string, error) {
 	password := os.Getenv(env)
 
 	if interactive && password == "" && terminal.IsTerminal(syscall.Stdin) {
@@ -35,13 +35,13 @@ func GetPassword(env string, interactive bool) string {
 		defer os.Stdin.Write([]byte("\n"))
 
 		if err != nil {
-			panic(err)
+			return "", err
 		}
 
 		password = string(pw)
 	}
 
-	return password
+	return password, nil
 }
 
 func sortedIssuesMapKeys(m map[string][]*jira.Issue) []string {

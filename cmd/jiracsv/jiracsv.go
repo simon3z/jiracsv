@@ -62,15 +62,15 @@ func main() {
 	flag.Parse()
 
 	if commandFlags.Configuration == "" {
-		panic(fmt.Errorf("configuration file not specified"))
+		panic("configuration file not specified")
 	}
 
 	if commandFlags.Profile == "" {
-		panic(fmt.Errorf("profile id file not specified"))
+		panic("profile id file not specified")
 	}
 
 	if commandFlags.Username == "" {
-		panic(fmt.Errorf("jira username not specified"))
+		panic("jira username not specified")
 	}
 
 	config, err := ReadConfigFile(commandFlags.Configuration)
@@ -85,7 +85,12 @@ func main() {
 		panic(fmt.Errorf("profile '%s' not found", commandFlags.Profile))
 	}
 
-	password := GetPassword("PASSWORD", true)
+	password, err := GetPassword("PASSWORD", true)
+
+	if err != nil {
+		panic(err)
+	}
+
 	jiraClient, err := jira.NewClient(config.Instance.URL, &commandFlags.Username, &password)
 
 	if err != nil {

@@ -56,8 +56,8 @@ const (
 )
 
 var (
-	// ErrorAuthentication is returned when the authentication failed
-	ErrorAuthentication = errors.New("Access Unauthorized: check basic authentication")
+	// ErrAuthentication is returned when the authentication failed
+	ErrAuthentication = errors.New("jira: access unauthorized")
 
 	// ErrMultipleIssues is returned when multiple issues are found
 	ErrMultipleIssues = errors.New("jira: unexpected multiple issues")
@@ -128,7 +128,7 @@ func jiraReturnError(ret *jira.Response, err error) error {
 	}
 
 	if ret.Response.StatusCode == http.StatusForbidden || ret.Response.StatusCode == http.StatusUnauthorized {
-		return ErrorAuthentication
+		return ErrAuthentication
 	}
 
 	return err
