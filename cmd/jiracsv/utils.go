@@ -56,6 +56,13 @@ func sortedIssuesMapKeys(m map[string][]*jira.Issue) []string {
 	return keys
 }
 
+func jiraIssueMarketProblemLink(i *jira.Issue) (string, string) {
+	if i.MarketProblem == nil {
+		return "", ""
+	}
+	return i.MarketProblem.Link, i.MarketProblem.Fields.Summary
+}
+
 func googleSheetLink(link, text string) string {
 	return fmt.Sprintf("=HYPERLINK(\"%s\",\"%s\")", link, text)
 }

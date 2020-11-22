@@ -46,7 +46,7 @@ func writeIssues(w *csv.Writer, component *string, issues []*jira.Issue) {
 		w.Write([]string{
 			googleSheetLink(i.Link, i.Key),
 			i.Fields.Summary,
-			i.Fields.Type.Name,
+			googleSheetLink(jiraIssueMarketProblemLink(i)),
 			i.Fields.Priority.Name,
 			i.Fields.Status.Name,
 			i.Owner,

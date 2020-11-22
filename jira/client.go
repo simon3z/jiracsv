@@ -253,6 +253,7 @@ func (c *Client) FindIssues(jql string) (IssueCollection, error) {
 				i,
 				issueURL.String(),
 				parentLink,
+				nil,
 				NewIssueCollection(0),
 				storyPoints,
 				issueReadiness,
@@ -280,29 +281,51 @@ func (c *Client) FindEpics(jql string) (IssueCollection, error) {
 		return nil, err
 	}
 
-	ch := make(chan error)
-
 	epics := issues.FilterByFunction(func(i *Issue) bool {
 		return i.IsType(IssueTypeEpic)
 	})
 
+	ch := make(chan error)
+	defer close(ch)
+
 	for _, i := range epics {
-		go func(i *Issue, ch chan<- error) {
-			linkedIssues, err := c.FindIssues(fmt.Sprintf("issueFunction in issuesInEpics(\"Key = %s\") ORDER BY Key ASC", i.Key))
-
-			if err == nil {
-				i.LinkedIssues = linkedIssues
-			}
-
-			ch <- err
-		}(i, ch)
+		go func(i *Issue, ch chan<- error) { ch <- addLinkedIssues(c, i) }(i, ch)
 	}
+
+	linksErr := error(nil)
 
 	for range epics {
 		if err := <-ch; err != nil {
-			return nil, err
+			linksErr = err
 		}
 	}
 
-	return issues, nil
+	return issues, linksErr
+}
+
+func addLinkedIssues(c *Client, i *Issue) error {
+	jql := fmt.Sprintf("issueFunction in linkedIssuesOfRecursive(\"issue = %s\", \"is child of\") AND type = \"Market Problem\"", i.Key)
+	marketProblem, err := c.FindIssues(jql)
+
+	switch {
+	case err != nil:
+		return err
+	case len(marketProblem) > 1:
+		return ErrMultipleIssues
+	case len(marketProblem) < 1:
+		return nil
+	}
+
+	i.MarketProblem = marketProblem[0]
+
+	jql = fmt.Sprintf("issueFunction in issuesInEpics(\"Key = %s\")", i.Key)
+	linkedIssues, err := c.FindIssues(jql)
+
+	if err != nil {
+		return err
+	}
+
+	i.LinkedIssues = linkedIssues
+
+	return nil
 }

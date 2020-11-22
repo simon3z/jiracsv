@@ -28,18 +28,19 @@ type IssuePlanning struct {
 // Issue represents a Jira Issue
 type Issue struct {
 	jira.Issue
-	Link         string
-	ParentLink   string
-	LinkedIssues IssueCollection
-	StoryPoints  int
-	Readiness    IssueReadiness
-	Planning     IssuePlanning
-	Design       string
-	QEAssignee   string
-	Acceptance   string
-	Owner        string
-	Impediment   bool
-	Comments     []*Comment
+	Link          string
+	ParentLink    string
+	MarketProblem *Issue
+	LinkedIssues  IssueCollection
+	StoryPoints   int
+	Readiness     IssueReadiness
+	Planning      IssuePlanning
+	Design        string
+	QEAssignee    string
+	Acceptance    string
+	Owner         string
+	Impediment    bool
+	Comments      []*Comment
 }
 
 // Comment represents Jira Issue Comment
@@ -57,6 +58,9 @@ const (
 var (
 	// ErrorAuthentication is returned when the authentication failed
 	ErrorAuthentication = errors.New("Access Unauthorized: check basic authentication")
+
+	// ErrMultipleIssues is returned when multiple issues are found
+	ErrMultipleIssues = errors.New("jira: unexpected multiple issues")
 )
 
 // IssueType represent an Issue Type
