@@ -23,6 +23,7 @@ type Client struct {
 		Flagged     string
 		Planning    string
 		Readiness   string
+		Commitment  string
 		Design      string
 	}
 }
@@ -66,8 +67,6 @@ func NewClient(url string, username, password *string) (*Client, error) {
 			client.CustomFieldID.EpicLink = f.ID
 		case "Story Points":
 			client.CustomFieldID.StoryPoints = f.ID
-		case "5-Acks Check":
-			client.CustomFieldID.AckFlags = f.ID
 		case "QE Assignee":
 			client.CustomFieldID.QEAssignee = f.ID
 		case "Acceptance Criteria":
@@ -78,6 +77,8 @@ func NewClient(url string, username, password *string) (*Client, error) {
 			client.CustomFieldID.Planning = f.ID
 		case "Ready-Ready":
 			client.CustomFieldID.Readiness = f.ID
+		case "OpenShift Planning Ack":
+			client.CustomFieldID.Commitment = f.ID
 		case "Design Doc":
 			client.CustomFieldID.Design = f.ID
 		}
@@ -173,6 +174,21 @@ func (c *Client) FindIssues(jql string) (IssueCollection, error) {
 				}
 			}
 
+			issueCommitment := IssueCommitment{false, false, false}
+
+			if val := i.Fields.Unknowns[c.CustomFieldID.Commitment]; val != nil {
+				for _, p := range val.([]interface{}) {
+					switch p.(map[string]interface{})["value"].(string) {
+					case "qe-ack":
+						issueCommitment.Quality = true
+					case "doc-ack":
+						issueCommitment.Documentation = true
+					case "px-ack":
+						issueCommitment.Support = true
+					}
+				}
+			}
+
 			designLink := ""
 
 			if val := i.Fields.Unknowns[c.CustomFieldID.Design]; val != nil {
@@ -258,6 +274,7 @@ func (c *Client) FindIssues(jql string) (IssueCollection, error) {
 				storyPoints,
 				issueReadiness,
 				issuePlanning,
+				issueCommitment,
 				designLink,
 				qeAssignee,
 				acceptanceCriteria,

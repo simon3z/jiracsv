@@ -25,6 +25,13 @@ type IssuePlanning struct {
 	NoQE      bool
 }
 
+// IssueCommitment represents a Jira Issue Commitment
+type IssueCommitment struct {
+	Quality       bool
+	Documentation bool
+	Support       bool
+}
+
 // Issue represents a Jira Issue
 type Issue struct {
 	jira.Issue
@@ -35,6 +42,7 @@ type Issue struct {
 	StoryPoints   int
 	Readiness     IssueReadiness
 	Planning      IssuePlanning
+	Commitment    IssueCommitment
 	Design        string
 	QEAssignee    string
 	Acceptance    string
@@ -230,4 +238,9 @@ func (i *Issue) HasLabel(label string) bool {
 func (i *Issue) Ready() bool {
 	return (i.Readiness.Development && i.Readiness.Product && i.Readiness.Quality &&
 		i.Readiness.Experience && i.Readiness.Documentation && i.Readiness.Support)
+}
+
+// IsCommitted returns true if the issue has committment from all stakeholders
+func (i *Issue) IsCommitted() bool {
+	return (i.Commitment.Quality && i.Commitment.Documentation && i.Commitment.Support)
 }
