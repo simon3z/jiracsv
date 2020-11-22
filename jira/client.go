@@ -167,9 +167,9 @@ func (c *Client) FindIssues(jql string) (IssueCollection, error) {
 					case "no-feature":
 						issuePlanning.NoFeature = true
 					case "no-doc":
-						issuePlanning.NoDoc = true
+						issuePlanning.NoDocumentation = true
 					case "no-qe":
-						issuePlanning.NoQE = true
+						issuePlanning.NoQuality = true
 					}
 				}
 			}

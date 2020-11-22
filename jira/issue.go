@@ -20,9 +20,9 @@ type IssueReadiness struct {
 
 // IssuePlanning represents a Jira Issue Planning
 type IssuePlanning struct {
-	NoFeature bool
-	NoDoc     bool
-	NoQE      bool
+	NoFeature       bool
+	NoDocumentation bool
+	NoQuality       bool
 }
 
 // IssueCommitment represents a Jira Issue Commitment
