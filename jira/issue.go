@@ -242,5 +242,7 @@ func (i *Issue) Ready() bool {
 
 // IsCommitted returns true if the issue has committment from all stakeholders
 func (i *Issue) IsCommitted() bool {
-	return (i.Commitment.Quality && i.Commitment.Documentation && i.Commitment.Support)
+	return ((i.Planning.NoQuality || i.Commitment.Quality) &&
+		(i.Planning.NoDocumentation || i.Commitment.Documentation) &&
+		i.Commitment.Support)
 }
